@@ -1,1 +1,3 @@
 /target
+Cargo.lock
+/repo_to_compile
