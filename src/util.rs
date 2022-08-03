@@ -31,6 +31,10 @@ pub async fn is_valid_target(target_triple: &String) -> Option<&String> {
     let output = std::str::from_utf8(&results.stdout).ok()?;
     let toolchain_exists = output.contains(target_triple);
 
+    // TODO: Considering how this straight up polutes the rustup of the
+    //       server machine with tons of targets i think its better to
+    //       just keep a list of the availible targets and compare against
+    //       that since cross doesnt use rustups targets either way (i think)
     if !toolchain_exists {
         // add the toolchain
         // This only adds the toolchain, not installed...
@@ -56,6 +60,9 @@ pub async fn is_valid_target(target_triple: &String) -> Option<&String> {
 }
 
 /// Gets file contents and returns them as a axum-returnable type.
+///
+/// Uses the given `target_triple` and `executable_name` to find the executable file to return and
+/// creates a axum-returnable representing the executable file.
 pub async fn return_file(
     target_triple: &String,
     executable_name: &String,

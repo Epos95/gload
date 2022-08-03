@@ -33,9 +33,9 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let matches = command!()
-        .arg(arg!([repo] "The repo to compile and distribute"))
-        .arg(arg!(-t [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
-        .arg(arg!(-d --develop "Whether to always re-pull the pointed to repository"))
+        .arg(arg!(             [repo]    "The repo to compile and distribute"))
+        .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
+        .arg(arg!(-d --develop           "Whether to always re-pull the pointed to repository"))
         .get_matches();
 
     // TODO: This arg should be mandatory at release!

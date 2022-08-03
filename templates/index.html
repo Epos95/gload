@@ -229,6 +229,7 @@
             var response;
             xhr.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
+                    // This response will be the target triple needed
                     response = this.responseText;
                 }
             };
@@ -239,6 +240,28 @@
             //window.location.href = window.location.href + "get_binary/" + string;
         }
 
+/* basically do all this to trigger a file download via axios get instead!
+ * Atleast when downloading the file.
+   <script src=
+"https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js">
+   </script>
+      function download(){
+          axios({
+              url:'https://source.unsplash.com/random/500x500',
+              method:'GET',
+              responseType: 'blob'
+      })
+      .then((response) => {
+             const url = window.URL
+             .createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'image.jpg');
+                    document.body.appendChild(link);
+                    link.click();
+      })
+      }
+    */
 
     </script>
   </head>

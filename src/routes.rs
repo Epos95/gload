@@ -42,6 +42,11 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
     // maybe write
     info!("Recvd: {json:#?}");
 
+    // so basically convert the thing to a target_triple
+    // here and return it as a response.
+    // need more data to know which target triple maps
+    // to which architectures first.
+
     "wow"
 }
 
@@ -57,14 +62,6 @@ pub async fn send_binary(
         error!("Invalid target_triple: {target_triple} found!");
         return Err(format!("Invalid target triple: {target_triple}"));
     }
-
-    // If target is not in cache
-    //   Check if target_triple in `currently_compiling` vector
-    //     if yes, busy wait untill it is not
-    //   else
-    //     add target to vector
-    //     compile stuff
-    //     remove target from vector
 
     // Wait on mutex first
     let _guard = currently_compiling.lock().await;
