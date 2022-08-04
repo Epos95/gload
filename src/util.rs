@@ -244,5 +244,8 @@ pub async fn get_executable_name(target_triple: &String) -> String {
 }
 
 pub fn cross_not_found() -> bool {
-    Command::new("cross").spawn().is_err()
+    Command::new("cross")
+        .stdout(Stdio::null())
+        .spawn()
+        .is_err()
 }
