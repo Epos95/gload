@@ -9,7 +9,7 @@ use axum::{
 };
 use clap::{arg, command};
 use compilation_state::CompilationState;
-use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration};
+use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration, process};
 use tokio::sync::Mutex;
 use tracing::{error, info};
 
@@ -31,6 +31,13 @@ type CompilationProgress = Arc<Mutex<CompilationState>>;
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
+    if util::cross_not_found() {
+        error!("the \"cross\" executable could not be found, is it installed and in path?");
+        std::process::exit(0);
+    } else {
+        info!("Cross found!");
+    }
 
     let matches = command!()
         .arg(arg!(             [repo]    "The repo to compile and distribute"))
