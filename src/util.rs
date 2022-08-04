@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc, process::Stdio, fs};
+use std::{path::PathBuf, sync::Arc, process::Stdio, fs, io::ErrorKind};
 use tokio::{io::{AsyncReadExt, BufReader, AsyncBufReadExt}, sync::Mutex};
 
 use axum::body::StreamBody;
@@ -120,7 +120,16 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
         }
     }
 
-    fs::remove_dir_all(REPO_LOCATION).unwrap();
+    if let Err(e) = fs::remove_dir_all(REPO_LOCATION) {
+        let kind = e.kind();
+
+        // Handle errors which are recoverable (such as NotFound)
+        // discreetly, otherwise panic.
+        match kind {
+            ErrorKind::NotFound => {},
+            _ => {Err(e).unwrap()}
+        }
+    }
 
     info!("Cloning repo to: \"{REPO_LOCATION}\"");
     let git_output = Command::new("git")
@@ -131,7 +140,7 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
         .stderr(Stdio::null())
         .spawn();
 
-    // NOTE: could maybe simply this match by using .and_then() or something
+    // NOTE: could maybe simplifyy this match by using .and_then() or something
     //       since we just need to apply a function to the value if its Ok(),
     //       otherwise we should print the error.
     match git_output {
