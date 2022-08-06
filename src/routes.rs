@@ -5,8 +5,8 @@ use axum::{
     Extension, Json,
 };
 use http::StatusCode;
-use serde::Deserialize;
-use std::{path::PathBuf, sync::Arc};
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, sync::Arc, fs::{OpenOptions, self}};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
 use tracing::{error, info};
 
@@ -27,7 +27,7 @@ pub async fn get_target() -> impl IntoResponse {
         .unwrap()
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct PostData {
     os: String,
@@ -35,12 +35,30 @@ pub struct PostData {
     user_agent: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+struct PostDataHolder{ post_data: Vec<PostData>}
+
+
 // From the data sent here the server should respond with a token for which specific file to download
 // the token can then be used by GETting a route with the token as a parameter or something :D
 // This token could probably be the target_triple, which would prolly work out nicely.
 pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
     // maybe write
     info!("Recvd: {json:#?}");
+
+    let data = fs::read_to_string("data.json").unwrap();
+    let mut vector: PostDataHolder = serde_json::from_str(&data).unwrap();
+
+    vector.post_data.push(json);
+
+    // Log the target triples recvd
+    let fd = OpenOptions::new()
+        .append(false)
+        .write(true)
+        .open("data.json")
+        .unwrap();
+    serde_json::to_writer_pretty(fd, &vector).unwrap();
+
 
     // so basically convert the thing to a target_triple
     // here and return it as a response.

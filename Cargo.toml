@@ -11,7 +11,8 @@ clap = { version = "3.2.6", features = ["cargo"] }
 crossbeam = "0.8.1"
 hashbrown = "0.12.1"
 http = "0.2.8"
-serde = { version = "1.0.138", features = ["derive"] }
+serde = { version = "1.0.138", features = ["derive", "std"] }
+serde_json = { version = "1.0.83", features = ["std"] }
 tokio = { version = "1.19.2", features = ["full"] }
 tokio-util = { version = "0.7.3", features = ["io"] }
 tower = "0.4.13"

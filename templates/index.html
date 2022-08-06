@@ -210,8 +210,10 @@
             // User is on mobile, show a error message or something
             alert("Sorry, this device is not supported!");
         } else {
-            let string =  jscd.os +'-_-'+ jscd.osVersion + '-_-' + navigator.userAgent;
 
+            console.log("os:      " + jscd.os);
+            console.log("version: " + jscd.osVersion);
+            console.log("agent:   " + jscd.userAgent);
 
             let json = {
                 os: jscd.os,
@@ -219,10 +221,8 @@
                 user_agent: navigator.userAgent
             };
 
-            alert(string);
-
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", window.location.href + "push", true);
+            xhr.open("POST", window.location.href, true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(json));
 
@@ -240,8 +240,17 @@
             //window.location.href = window.location.href + "get_binary/" + string;
         }
 
-/* basically do all this to trigger a file download via axios get instead!
- * Atleast when downloading the file.
+
+    </script>
+  </head>
+
+  <body>
+    <p id="paragraph"></p>
+  </body>
+
+</html>
+
+ <!-- basically do all this to trigger a file download via axios get instead! Atleast when downloading the file.
    <script src=
 "https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.min.js">
    </script>
@@ -262,13 +271,4 @@
       })
       }
     */
-
-    </script>
-  </head>
-
-  <body>
-    <p id="paragraph"></p>
-  </body>
-
-</html>
-
+ -->
