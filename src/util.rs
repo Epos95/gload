@@ -35,6 +35,7 @@ pub async fn is_valid_target(target_triple: &String) -> Option<&String> {
     //       server machine with tons of targets i think its better to
     //       just keep a list of the availible targets and compare against
     //       that since cross doesnt use rustups targets either way (i think)
+    //       to do this we first need a list of all the targets...
     if !toolchain_exists {
         // add the toolchain
         // This only adds the toolchain, not installed...
@@ -124,7 +125,8 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
         let kind = e.kind();
 
         // Handle errors which are recoverable (such as NotFound)
-        // discreetly, otherwise panic.
+        // discreetly, otherwise panic. This is because NotFound
+        // really doesnt matter to us at this point
         match kind {
             ErrorKind::NotFound => {},
             _ => {Err(e).unwrap()}
