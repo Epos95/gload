@@ -1,3 +1,4 @@
+use crate::util::REPO_LOCATION;
 use axum::{
     body::{self, Full},
     extract::Path,
@@ -86,13 +87,23 @@ pub async fn send_binary(
     drop(_guard);
 
     // Check if in cache
+    // TODO: This can be constructed in a more clever way.
     let mut res = cache.lock().await.get(&target_triple);
     if let None = res {
         // is not in cache, needs to compile
         let _guard = currently_compiling.lock().await;
 
-        let s = util::compile(&target_triple, cache, compilation_state).await?;
-        res = Some(PathBuf::from(s));
+        let executable_path = util::compile(&target_triple, compilation_state).await?;
+
+        info!("Compiled, now Inserting {target_triple} into cache");
+
+        // Update the cache accordingly
+        cache.lock().await.insert(
+            target_triple.clone(),
+            executable_path.clone(),
+        );
+
+        res = Some(executable_path);
     }
 
     let name = res

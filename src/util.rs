@@ -165,11 +165,12 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
     Ok(())
 }
 
+/// Tries to compile for the specified target_triple.
+/// Returns the path to the compiled executable file.
 pub async fn compile(
     target_triple: &String,
-    cache: Arc<Mutex<Cache>>,
     compilation_state: CompilationProgress,
-) -> Result<String, String> {
+) -> Result<PathBuf, String> {
     info!("{target_triple} is not in cache, adding and compiling it now!");
 
     // need some way to get the "building" part of cargo output
@@ -207,23 +208,16 @@ pub async fn compile(
         return Err("Sorry, we failed to compile your repository. This probably means that your computer cannot run this app.".to_string());
     }
 
-    info!("Compiled, now Inserting {target_triple} into cache");
-    // Update the cache accordingly
-
     let executable_name = get_executable_name(target_triple).await;
+    let executable_path = PathBuf::from(format!(
+        "{REPO_LOCATION}/target/{target_triple}/release/{executable_name}"
+    ));
 
-    cache.lock().await.insert(
-        target_triple.clone(),
-        PathBuf::from(format!(
-            "{REPO_LOCATION}/target/{target_triple}/release/{executable_name}"
-        )),
-    );
-
-    Ok(executable_name)
+    Ok(executable_path)
 }
 
+/// Get a executables name via Cargo.toml to be /absolutely/ sure its the corrent name.
 pub async fn get_executable_name(target_triple: &String) -> String {
-    // Get the executables name from Cargo.toml
     let mut file_descriptor = File::open(format!("{REPO_LOCATION}/Cargo.toml"))
         .await
         .unwrap();
