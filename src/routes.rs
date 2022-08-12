@@ -87,27 +87,27 @@ pub async fn send_binary(
     drop(_guard);
 
     // Check if in cache
-    // TODO: This can be constructed in a more clever way.
-    let mut res = cache.lock().await.get(&target_triple);
-    if let None = res {
-        // is not in cache, needs to compile
-        let _guard = currently_compiling.lock().await;
+    let result_path = match cache.lock().await.get(&target_triple) {
+        Some(r) => r,
+        None => {
+            // is not in cache, needs to compile
+            let _guard = currently_compiling.lock().await;
 
-        let executable_path = util::compile(&target_triple, compilation_state).await?;
+            let executable_path = util::compile(&target_triple, compilation_state).await?;
 
-        info!("Compiled, now Inserting {target_triple} into cache");
+            info!("Compiled, now Inserting {target_triple} into cache");
 
-        // Update the cache accordingly
-        cache.lock().await.insert(
-            target_triple.clone(),
-            executable_path.clone(),
-        );
+            // Update the cache accordingly
+            cache.lock().await.insert(
+                target_triple.clone(),
+                executable_path.clone(),
+            );
 
-        res = Some(executable_path);
-    }
+            executable_path
+        }
+    };
 
-    let name = res
-        .unwrap()
+    let name = result_path
         .into_os_string()
         .into_string()
         .unwrap()
