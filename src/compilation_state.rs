@@ -6,6 +6,9 @@ pub enum State {
 }
 
 pub struct CompilationState {
+    // Just to fix warnings for now, untill the whole 
+    // compilation progress thing actually works
+    #[allow(dead_code)]
     cur_state: State,
     pub message: String,
     pub progress: i32,

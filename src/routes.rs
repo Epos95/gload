@@ -1,4 +1,3 @@
-use crate::util::REPO_LOCATION;
 use axum::{
     body::{self, Full},
     extract::Path,
@@ -7,11 +6,11 @@ use axum::{
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc, fs::{OpenOptions, self}};
+use std::{sync::Arc, fs::{OpenOptions, self}};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
 use tracing::{error, info};
 
-use crate::{cache::Cache, compilation_state, CompilationProgress};
+use crate::{cache::Cache, CompilationProgress};
 use crate::util;
 use crate::CurrentlyCompiling;
 

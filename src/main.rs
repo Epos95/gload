@@ -9,7 +9,7 @@ use axum::{
 };
 use clap::{arg, command};
 use compilation_state::CompilationState;
-use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration, process};
+use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{error, info};
 

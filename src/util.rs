@@ -1,5 +1,5 @@
-use std::{path::PathBuf, sync::Arc, process::Stdio, fs, io::ErrorKind};
-use tokio::{io::{AsyncReadExt, BufReader, AsyncBufReadExt}, sync::Mutex};
+use std::{path::PathBuf, process::Stdio, fs, io::ErrorKind};
+use tokio::io::{AsyncReadExt, BufReader, AsyncBufReadExt};
 
 use axum::body::StreamBody;
 use http::{header, HeaderMap, HeaderValue};
@@ -7,7 +7,7 @@ use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
 use tracing::{error, info};
 
-use crate::{cache::Cache, compilation_state::{self, CompilationState}, CompilationProgress};
+use crate::{compilation_state::CompilationState, CompilationProgress};
 
 pub const REPO_LOCATION: &str = "repo_to_compile";
 
@@ -184,28 +184,30 @@ pub async fn compile(
         //.stderr(Stdio::piped())
         .spawn().unwrap();
 
-    // NONE OF THIS WORKS
-    // cargo / rustc doesnt show a progress bar untless its sure its in a terminal
-    // we might be able to trick it somehow tho, maybe pseudoterminals?
-    // otherwise just show the thing currently being compiled and for what.
+    {
+        // NONE OF THIS WORKS
+        // cargo / rustc doesnt show a progress bar untless its sure its in a terminal
+        // we might be able to trick it somehow tho, maybe pseudoterminals?
+        // otherwise just show the thing currently being compiled and for what.
 
-    let reader = BufReader::new(s.stderr.unwrap());
+        let reader = BufReader::new(s.stderr.unwrap());
 
-    let mut lines = reader.lines();
+        let mut lines = reader.lines();
 
-    let mut gracefully_exited = false;
+        let mut gracefully_exited = false;
 
-    while let Some(line) = lines.next_line().await.unwrap() {
-        gracefully_exited = line.contains("Finished");
+        while let Some(line) = lines.next_line().await.unwrap() {
+            gracefully_exited = line.contains("Finished");
 
-        let mut guard = compilation_state.lock().await;
-        *guard = CompilationState::compiling(line, 10);
-    }
+            let mut guard = compilation_state.lock().await;
+            *guard = CompilationState::compiling(line, 10);
+        }
 
-    // Handle eventual errors while compiling the repository.
-    if !gracefully_exited {
-        error!("Failed to compile for target: {target_triple}");
-        return Err("Sorry, we failed to compile your repository. This probably means that your computer cannot run this app.".to_string());
+        // Handle eventual errors while compiling the repository.
+        if !gracefully_exited {
+            error!("Failed to compile for target: {target_triple}");
+            return Err("Sorry, we failed to compile your repository. This probably means that your computer cannot run this app.".to_string());
+        }
     }
 
     let executable_name = get_executable_name(target_triple).await;
