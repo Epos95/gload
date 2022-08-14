@@ -8,7 +8,6 @@ use axum::{
     Extension, Router,
 };
 use clap::{arg, command};
-use compilation_state::CompilationState;
 use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{error, info};
@@ -16,17 +15,11 @@ use tracing::{error, info};
 pub mod cache;
 pub mod routes;
 pub mod util;
-pub mod compilation_state;
-
 
 use crate::cache::Cache;
 
 /// Represents the mutex for compilation.
 type CurrentlyCompiling = Arc<Mutex<()>>;
-
-/// Type needed to share the progress of the current compilation.
-type CompilationProgress = Arc<Mutex<CompilationState>>;
-
 
 #[tokio::main]
 async fn main() {
@@ -81,7 +74,6 @@ async fn main() {
     ));
 
     let currently_compiling: CurrentlyCompiling = Arc::new(Mutex::new(()));
-    let compilation_progress: CompilationProgress = Arc::new(Mutex::new(CompilationState::default()));
 
     // build our application with some routes
     let app = Router::new()
@@ -91,8 +83,7 @@ async fn main() {
         .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))
-        .layer(Extension(currently_compiling))
-        .layer(Extension(compilation_progress));
+        .layer(Extension(currently_compiling));
 
     // run it
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

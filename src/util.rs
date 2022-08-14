@@ -1,5 +1,5 @@
 use std::{path::PathBuf, process::Stdio, fs, io::ErrorKind};
-use tokio::io::{AsyncReadExt, BufReader, AsyncBufReadExt};
+use tokio::io::AsyncReadExt;
 
 use axum::body::StreamBody;
 use http::{header, HeaderMap, HeaderValue};
@@ -7,7 +7,6 @@ use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
 use tracing::{error, info};
 
-use crate::{compilation_state::CompilationState, CompilationProgress};
 
 pub const REPO_LOCATION: &str = "repo_to_compile";
 
@@ -95,6 +94,7 @@ pub async fn return_file(
     Ok((headers, body))
 }
 
+
 pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> Result<(), String> {
     info!("Checking repo availiability...");
 
@@ -169,7 +169,6 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
 /// Returns the path to the compiled executable file.
 pub async fn compile(
     target_triple: &String,
-    compilation_state: CompilationProgress,
 ) -> Result<PathBuf, String> {
     info!("{target_triple} is not in cache, adding and compiling it now!");
 
@@ -180,33 +179,17 @@ pub async fn compile(
         .arg("--manifest-path")
         .arg(format!("{REPO_LOCATION}/Cargo.toml"))
         .arg(format!("--target={target_triple}"))
-        //.stdout(Stdio::piped())
-        //.stderr(Stdio::piped())
-        .spawn().unwrap();
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .status()
+        .await
+        .expect("Failed to use cross.");
 
-    {
-        // NONE OF THIS WORKS
-        // cargo / rustc doesnt show a progress bar untless its sure its in a terminal
-        // we might be able to trick it somehow tho, maybe pseudoterminals?
-        // otherwise just show the thing currently being compiled and for what.
-
-        let reader = BufReader::new(s.stderr.unwrap());
-
-        let mut lines = reader.lines();
-
-        let mut gracefully_exited = false;
-
-        while let Some(line) = lines.next_line().await.unwrap() {
-            gracefully_exited = line.contains("Finished");
-
-            let mut guard = compilation_state.lock().await;
-            *guard = CompilationState::compiling(line, 10);
-        }
-
-        // Handle eventual errors while compiling the repository.
-        if !gracefully_exited {
-            error!("Failed to compile for target: {target_triple}");
-            return Err("Sorry, we failed to compile your repository. This probably means that your computer cannot run this app.".to_string());
+    // NOTE: This does NOT seem that healthy tbh
+    if let Some(code) = s.code() {
+        if code > 0 {
+            error!("Cross returned error code: {code}");
+            return Err("Cross return error code: {code}".to_string());
         }
     }
 
@@ -214,6 +197,7 @@ pub async fn compile(
     let executable_path = PathBuf::from(format!(
         "{REPO_LOCATION}/target/{target_triple}/release/{executable_name}"
     ));
+
 
     Ok(executable_path)
 }

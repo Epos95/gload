@@ -10,7 +10,7 @@ use std::{sync::Arc, fs::{OpenOptions, self}};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
 use tracing::{error, info};
 
-use crate::{cache::Cache, CompilationProgress};
+use crate::cache::Cache ;
 use crate::util;
 use crate::CurrentlyCompiling;
 
@@ -71,7 +71,6 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
 pub async fn send_binary(
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
     Extension(currently_compiling): Extension<CurrentlyCompiling>,
-    Extension(compilation_state): Extension<CompilationProgress>,
     Path(target_triple): Path<String>,
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
@@ -85,14 +84,18 @@ pub async fn send_binary(
     let _guard = currently_compiling.lock().await;
     drop(_guard);
 
+    let guard = cache.lock().await;
+    let potential_path = guard.get(&target_triple);
+    drop(guard);
+
     // Check if in cache
-    let result_path = match cache.lock().await.get(&target_triple) {
+    let result_path = match potential_path {
         Some(r) => r,
         None => {
             // is not in cache, needs to compile
             let _guard = currently_compiling.lock().await;
 
-            let executable_path = util::compile(&target_triple, compilation_state).await?;
+            let executable_path = util::compile(&target_triple).await?;
 
             info!("Compiled, now Inserting {target_triple} into cache");
 
@@ -119,9 +122,6 @@ pub async fn send_binary(
 }
 
 pub async fn status(
-    Extension(compilation_state): Extension<CompilationProgress>,
 ) -> impl IntoResponse {
-    let guard = compilation_state.lock().await;
-
-    format!("{};{}", guard.message, guard.progress)
+    "status here"
 }
