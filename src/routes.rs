@@ -75,7 +75,7 @@ pub async fn send_binary(
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
 
-    if (util::is_valid_target(&target_triple).await).is_none() {
+    if util::is_valid_target(&target_triple) {
         error!("Invalid target_triple: {target_triple} found!");
         return Err(format!("Invalid target triple: {target_triple}"));
     }

@@ -7,56 +7,28 @@ use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
 use tracing::{error, info};
 
-
 pub const REPO_LOCATION: &str = "repo_to_compile";
 
-// This function is a bit worthless combined with Cross but its still (maybe)
-// the best way to check if a target triple is valid...
-/// Validates a target triple by checking if the corresponding target is installed.
-/// Returns `None` if the requested target triple is not found.
-pub async fn is_valid_target(target_triple: &String) -> Option<&String> {
+/// Validates a target triple by checking if the given target is a tier 1
+/// supported rust target. (see https://doc.rust-lang.org/nightly/rustc/platform-support.html) for more information.
+pub fn is_valid_target(target_triple: &String) -> bool {
     // Check if toolchain is installed,
     // if installed, just return it
     // it not installed, try to install it
     // return toolchain string on success, error on failure
 
-    let results = Command::new("rustup")
-        .arg("toolchain")
-        .arg("list")
-        .output()
-        .await
-        .ok()?;
+    let valid_targets = vec![
+        "aarch64-unknown-linux-gnu",
+        "i686-pc-windows-gnu",
+        "i686-pc-windows-msvc",
+        "i686-unknown-linux-gnu",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-gnu",
+        "x86_64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+    ];
 
-    let output = std::str::from_utf8(&results.stdout).ok()?;
-    let toolchain_exists = output.contains(target_triple);
-
-    // TODO: Considering how this straight up polutes the rustup of the
-    //       server machine with tons of targets i think its better to
-    //       just keep a list of the availible targets and compare against
-    //       that since cross doesnt use rustups targets either way (i think)
-    //       to do this we first need a list of all the targets...
-    if !toolchain_exists {
-        // add the toolchain
-        // This only adds the toolchain, not installed...
-        //
-        // this is what has worked elsewhere (for windows machines)
-        // rustup target add x86_64-pc-windows-gnu
-        // rustup toolchain install stable-x86_64-pc-windows-gnu
-        let results = Command::new("rustup")
-            .arg("target")
-            .arg("add")
-            .arg(format!("nightly-{target_triple}"))
-            .status()
-            .await
-            .ok()?;
-
-        let status_code = results.code()?;
-        if status_code > 0 {
-            return None;
-        }
-    }
-
-    Some(target_triple)
+    valid_targets.contains(&target_triple.as_str())
 }
 
 /// Gets file contents and returns them as a axum-returnable type.
