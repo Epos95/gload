@@ -151,8 +151,8 @@ pub async fn compile(
         .arg("--manifest-path")
         .arg(format!("{REPO_LOCATION}/Cargo.toml"))
         .arg(format!("--target={target_triple}"))
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
         .status()
         .await
         .expect("Failed to use cross.");

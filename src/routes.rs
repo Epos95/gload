@@ -100,6 +100,7 @@ pub async fn send_binary(
             info!("Compiled, now Inserting {target_triple} into cache");
 
             // Update the cache accordingly
+            // TODO: This cache insertion might be a bit premature since things can still fail...
             cache.lock().await.insert(
                 target_triple.clone(),
                 executable_path.clone(),
