@@ -15,6 +15,8 @@ use crate::util;
 use crate::CurrentlyCompiling;
 
 pub async fn get_target() -> impl IntoResponse {
+    // TODO: Need to always use the linux linker for windows
+    //       e.h -gnu and not -msvc
     // Send the html of the page which gets the target triple
 
     let mut file = File::open("templates/index.html").await.unwrap();

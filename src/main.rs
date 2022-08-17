@@ -60,7 +60,6 @@ async fn main() {
     info!("Cache timeout set to {time_out} seconds.");
 
 
-    // TODO: This is not updated.
     let callback: Option<fn(String)> = Some(|x| {
         let fname = format!("{REPO_LOCATION}/target/{x}");
         if let Err(e) = remove_dir_all(&fname) {
