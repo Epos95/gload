@@ -9,26 +9,43 @@ use tracing::{error, info};
 
 pub const REPO_LOCATION: &str = "repo_to_compile";
 
-/// Validates a target triple by checking if the given target is a tier 1
-/// supported rust target. (see https://doc.rust-lang.org/nightly/rustc/platform-support.html) for more information.
-pub fn is_valid_target(target_triple: &String) -> bool {
+pub async fn is_valid_target(target_triple: &String) -> Option<String> {
     // Check if toolchain is installed,
     // if installed, just return it
     // it not installed, try to install it
     // return toolchain string on success, error on failure
+    let results = Command::new("rustup")
+        .arg("toolchain")
+        .arg("list")
+        .output()
+        .await
+        .ok()?;
 
-    let valid_targets = vec![
-        "aarch64-unknown-linux-gnu",
-        "i686-pc-windows-gnu",
-        "i686-pc-windows-msvc",
-        "i686-unknown-linux-gnu",
-        "x86_64-apple-darwin",
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-        "x86_64-unknown-linux-gnu",
-    ];
+    let output = std::str::from_utf8(&results.stdout).ok()?;
+    let toolchain_exists = output.contains(target_triple);
 
-    valid_targets.contains(&target_triple.as_str())
+    if !toolchain_exists {
+        // add the toolchain
+        // This only adds the toolchain, not installed...
+        //
+        // this is what has worked elsewhere (for windows machines)
+        // rustup target add x86_64-pc-windows-gnu
+        // rustup toolchain install stable-x86_64-pc-windows-gnu
+        let results = Command::new("rustup")
+            .arg("target")
+            .arg("add")
+            .arg(format!("{target_triple}"))
+            .status()
+            .await
+            .ok()?;
+
+        let status_code = results.code()?;
+        if status_code > 0 {
+            return None;
+        }
+    }
+
+    Some(target_triple.to_owned())
 }
 
 /// Gets file contents and returns them as a axum-returnable type.
@@ -161,7 +178,7 @@ pub async fn compile(
     if let Some(code) = s.code() {
         if code > 0 {
             error!("Cross returned error code: {code}");
-            return Err("Cross return error code: {code}".to_string());
+            return Err(format!("Cross return error code: {code}"));
         }
     }
 
