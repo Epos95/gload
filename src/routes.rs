@@ -89,7 +89,7 @@ pub async fn send_binary(
     drop(guard);
 
     // Check if in cache
-    let result_path = match potential_path {
+    let result_path = match potential_path.clone() {
         Some(r) => r,
         None => {
             // is not in cache, needs to compile
@@ -99,18 +99,11 @@ pub async fn send_binary(
 
             info!("Compiled, now Inserting {target_triple} into cache");
 
-            // Update the cache accordingly
-            // TODO: This cache insertion might be a bit premature since things can still fail...
-            cache.lock().await.insert(
-                target_triple.clone(),
-                executable_path.clone(),
-            );
-
             executable_path
         }
     };
 
-    let name = result_path
+    let name = result_path.clone()
         .into_os_string()
         .into_string()
         .unwrap()
@@ -119,7 +112,17 @@ pub async fn send_binary(
         .unwrap()
         .to_string();
 
-    util::return_file(&target_triple, &name).await
+    let file = util::return_file(&target_triple, &name).await?;
+
+    if potential_path.is_none() {
+            // Update the cache accordingly
+            // TODO: This cache insertion might be a bit premature since things can still fail...
+            cache.lock().await.insert(
+                target_triple.clone(),
+                result_path.clone(),
+            );
+    }
+    Ok(file)
 }
 
 pub async fn status(
