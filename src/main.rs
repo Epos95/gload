@@ -17,6 +17,7 @@ pub mod routes;
 pub mod util;
 
 use crate::cache::Cache;
+use crate::util::REPO_LOCATION;
 
 /// Represents the mutex for compilation.
 type CurrentlyCompiling = Arc<Mutex<()>>;
@@ -61,7 +62,7 @@ async fn main() {
 
     // TODO: This is not updated.
     let callback: Option<fn(String)> = Some(|x| {
-        let fname = format!("binary_files/{x}");
+        let fname = format!("{REPO_LOCATION}/target/{x}");
         if let Err(e) = remove_dir_all(&fname) {
             info!("Callback failed to delete file: {fname} with error: {e:#?}");
         } else {
