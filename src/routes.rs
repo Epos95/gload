@@ -83,6 +83,7 @@ pub async fn send_binary(
     }
 
     // Wait on mutex first
+    // TODO: Determine if this extra lock is actually necessary
     let _guard = currently_compiling.lock().await;
     drop(_guard);
 
@@ -91,6 +92,7 @@ pub async fn send_binary(
     drop(guard);
 
     // Check if in cache
+    // NOTE: This could be done with like unwrap_or or something which computes the value in case of Err
     let result_path = match potential_path.clone() {
         Some(r) => r,
         None => {
@@ -98,8 +100,6 @@ pub async fn send_binary(
             let _guard = currently_compiling.lock().await;
 
             let executable_path = util::compile(&target_triple).await?;
-
-            info!("Compiled, now Inserting {target_triple} into cache");
 
             executable_path
         }
@@ -116,6 +116,8 @@ pub async fn send_binary(
 
     let file = util::return_file(&target_triple, &name).await?;
 
+    // Add to cache AFTER return to file has been successfull!
+    info!("Compiled, now Inserting {target_triple} into cache");
     if potential_path.is_none() {
             // Update the cache accordingly
             // TODO: This cache insertion might be a bit premature since things can still fail...

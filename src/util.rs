@@ -161,6 +161,9 @@ pub async fn compile(
 ) -> Result<PathBuf, String> {
     info!("{target_triple} is not in cache, adding and compiling it now!");
 
+    // TODO: So we CAN compile multiple things at the same time, blockage only occurs waiting for a lock file
+    //       however we need multiple repos for this... so basically everything about REPO_LOCATION is wrong
+
     // need some way to get the "building" part of cargo output
     let s = Command::new("cross")
         .arg("b")
