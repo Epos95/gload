@@ -22,6 +22,8 @@ use crate::util::REPO_LOCATION;
 /// Represents the mutex for compilation.
 type CurrentlyCompiling = Arc<Mutex<()>>;
 
+type TargetsCompiling = Arc<Mutex<Vec<String>>>;
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();

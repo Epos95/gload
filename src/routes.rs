@@ -6,13 +6,13 @@ use axum::{
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, fs::{OpenOptions, self}};
-use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
+use std::{sync::Arc, fs::{OpenOptions, self}, time::Duration};
+use tokio::{fs::File, io::AsyncReadExt, sync::Mutex, time::sleep};
 use tracing::{error, info};
 
 use crate::cache::Cache ;
 use crate::util;
-use crate::CurrentlyCompiling;
+use crate::TargetsCompiling;
 
 pub async fn get_target() -> impl IntoResponse {
     // TODO: Need to always use the linux linker for windows
@@ -72,7 +72,8 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
 
 pub async fn send_binary(
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
-    Extension(currently_compiling): Extension<CurrentlyCompiling>,
+    // TargetsCompiling should replace CurrentlyCompiling
+    Extensin(targets_compiling): Extension<TargetsCompiling>,
     Path(target_triple): Path<String>,
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
@@ -82,30 +83,76 @@ pub async fn send_binary(
         return Err(format!("Invalid target triple: {target_triple}"));
     }
 
-    // Wait on mutex first
-    // TODO: Determine if this extra lock is actually necessary
-    let _guard = currently_compiling.lock().await;
-    drop(_guard);
 
-    let guard = cache.lock().await;
-    let potential_path = guard.get(&target_triple);
-    drop(guard);
+    // Ensure that target is not in cache already
+    // if it is in cache, return the file early
+    let cache_guard = cache.lock().await;
+    if let Some(path) = cache_guard.get(&target_triple) {
+        let path_but_string = &path.into_os_string().into_string().unwrap();
+        return util::return_file(&target_triple, path_but_string).await;
+    }
+    drop(cache_guard);
 
-    // Check if in cache
-    // NOTE: This could be done with like unwrap_or or something which computes the value in case of Err
-    let result_path = match potential_path.clone() {
-        Some(r) => r,
-        None => {
-            // is not in cache, needs to compile
-            let _guard = currently_compiling.lock().await;
 
-            let executable_path = util::compile(&target_triple).await?;
+    // ENSURE THAT TARGET IS NOT IN CACHE
+    // check if target is currently being compiled
+    // if true:
+    //   wait untill it is no longer being compiled
+    // else:
+    //   add the target to the thing and proceed with the compilation
 
-            executable_path
+    let being_compiled = targets_compiling.lock().await;
+    let path_to_executable =  if being_compiled.contains(target_triple) {
+        // drop the guard so someone else (hopefully the one compiling)
+        // can take it and finish the compilation
+        drop(being_compiled);
+
+        // busy wait for the target to leave the vector (be finished compiling)
+        loop {
+            sleep(Duration::new(0,4)).await;
+            let guard = targets_compiling.lock().await;
+            if !guard.contains(target_triple) {
+                break;
+            }
+            drop(guard);
         }
+
+        // Sleep a bit extra just to be extra sure its made it into cache!
+        sleep(Duration::new(0,2)).await;
+
+        // get the (hopefully) compiled target from the cache
+        cache.lock().await.get(&target_triple).unwrap()
+    } else {
+        // add the target_triple to the vector to indicate that it is being compiled.
+        being_compiled.push(target_triple);
+
+        // Drop the mutex to allow others trying to compile the same target access.
+        drop(being_compiled);
+
+        let guard = cache.lock().await;
+        let potential_path = guard.get(&target_triple);
+        drop(guard);
+
+        let executable_path = util::compile(&target_triple).await?;
+
+        info!("Compiled, now Inserting {target_triple} into cache");
+        // NOTE: this might still be premature since we have not called
+        //       return_file() but i can solve that later in that case
+        cache.lock().await.insert(
+            target_triple.clone(),
+            executable_path.clone(),
+        );
+
+        // aquire lock on the vector
+        let being_compiled = targets_compiling.lock().await;
+        // remove target_triple from the vector
+        being_compiled.remove(target_triple);
+        // (drop the lock automatically)
+
+        executable_path
     };
 
-    let name = result_path.clone()
+    let name = path_to_executable.clone()
         .into_os_string()
         .into_string()
         .unwrap()
@@ -115,17 +162,6 @@ pub async fn send_binary(
         .to_string();
 
     let file = util::return_file(&target_triple, &name).await?;
-
-    // Add to cache AFTER return to file has been successfull!
-    info!("Compiled, now Inserting {target_triple} into cache");
-    if potential_path.is_none() {
-            // Update the cache accordingly
-            // TODO: This cache insertion might be a bit premature since things can still fail...
-            cache.lock().await.insert(
-                target_triple.clone(),
-                result_path.clone(),
-            );
-    }
     Ok(file)
 }
 
