@@ -23,6 +23,7 @@ type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 
 #[tokio::main]
 async fn main() {
+    // TODO: Better logging with tracing!
     tracing_subscriber::fmt::init();
 
     if util::cross_not_found() {
