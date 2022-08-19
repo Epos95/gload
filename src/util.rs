@@ -58,7 +58,7 @@ pub async fn return_file(
 ) -> Result<(HeaderMap, StreamBody<ReaderStream<File>>), String> {
     // At this point we can be sure that the file exists
     // and that we can grab it safely (hopefully)!
-    let fname = format!("{REPO_LOCATION}/target/{target_triple}/release/{executable_name}",);
+    let fname = format!("{REPO_LOCATION}/{target_triple}/target/{target_triple}/release/{executable_name}",);
     let file = match File::open(&fname).await {
         Ok(f) => f,
         Err(_) => {
@@ -84,6 +84,8 @@ pub async fn return_file(
 }
 
 
+// TODO: Since we clone the repo on the fly now that we compile multiple targets at the same time 
+//       this needs to be rewritten/repurposed
 pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> Result<(), String> {
     info!("Checking repo availiability...");
 
@@ -169,7 +171,7 @@ pub async fn compile(
         .arg("b")
         .arg("--release")
         .arg("--manifest-path")
-        .arg(format!("{REPO_LOCATION}/Cargo.toml"))
+        .arg(format!("{REPO_LOCATION}/{target_triple}/Cargo.toml"))
         .arg(format!("--target={target_triple}"))
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -196,7 +198,7 @@ pub async fn compile(
 
 /// Get a executables name via Cargo.toml to be /absolutely/ sure its the corrent name.
 pub async fn get_executable_name(target_triple: &String) -> String {
-    let mut file_descriptor = File::open(format!("{REPO_LOCATION}/Cargo.toml"))
+    let mut file_descriptor = File::open(format!("{REPO_LOCATION}/{target_triple}/Cargo.toml"))
         .await
         .unwrap();
     let mut string = String::new();

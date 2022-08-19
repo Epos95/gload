@@ -72,8 +72,7 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
 
 pub async fn send_binary(
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
-    // TargetsCompiling should replace CurrentlyCompiling
-    Extensin(targets_compiling): Extension<TargetsCompiling>,
+    Extension(targets_compiling): Extension<TargetsCompiling>,
     Path(target_triple): Path<String>,
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
@@ -101,8 +100,8 @@ pub async fn send_binary(
     // else:
     //   add the target to the thing and proceed with the compilation
 
-    let being_compiled = targets_compiling.lock().await;
-    let path_to_executable =  if being_compiled.contains(target_triple) {
+    let mut being_compiled = targets_compiling.lock().await;
+    let path_to_executable =  if being_compiled.contains(&target_triple) {
         // drop the guard so someone else (hopefully the one compiling)
         // can take it and finish the compilation
         drop(being_compiled);
@@ -111,7 +110,7 @@ pub async fn send_binary(
         loop {
             sleep(Duration::new(0,4)).await;
             let guard = targets_compiling.lock().await;
-            if !guard.contains(target_triple) {
+            if !guard.contains(&target_triple) {
                 break;
             }
             drop(guard);
@@ -124,15 +123,12 @@ pub async fn send_binary(
         cache.lock().await.get(&target_triple).unwrap()
     } else {
         // add the target_triple to the vector to indicate that it is being compiled.
-        being_compiled.push(target_triple);
+        being_compiled.push(target_triple.clone());
 
         // Drop the mutex to allow others trying to compile the same target access.
         drop(being_compiled);
 
-        let guard = cache.lock().await;
-        let potential_path = guard.get(&target_triple);
-        drop(guard);
-
+        // Compile the target, return the entire path to the the executable
         let executable_path = util::compile(&target_triple).await?;
 
         info!("Compiled, now Inserting {target_triple} into cache");
@@ -143,16 +139,15 @@ pub async fn send_binary(
             executable_path.clone(),
         );
 
-        // aquire lock on the vector
-        let being_compiled = targets_compiling.lock().await;
-        // remove target_triple from the vector
-        being_compiled.remove(target_triple);
+        // Remove the compiled target_triple from the vector
+        let mut being_compiled = targets_compiling.lock().await;
+        being_compiled.retain(|s| s != &target_triple);
         // (drop the lock automatically)
 
         executable_path
     };
 
-    let name = path_to_executable.clone()
+    let name = path_to_executable
         .into_os_string()
         .into_string()
         .unwrap()
