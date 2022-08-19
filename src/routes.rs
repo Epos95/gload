@@ -71,6 +71,7 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
 }
 
 pub async fn send_binary(
+    Extension(repo_name): Extension<String>,
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
     Extension(targets_compiling): Extension<TargetsCompiling>,
     Path(target_triple): Path<String>,
@@ -83,6 +84,17 @@ pub async fn send_binary(
     }
 
 
+    // check if target is in cache
+    // if true:
+    //   return the path from cache.
+    // else:
+    //   check if target is currently being compiled
+    //   if true:
+    //     wait untill it is no longer being compiled
+    //   else:
+    //     add the target to the thing and proceed with the compilation
+
+
     // Ensure that target is not in cache already
     // if it is in cache, return the file early
     let cache_guard = cache.lock().await;
@@ -92,14 +104,6 @@ pub async fn send_binary(
     }
     drop(cache_guard);
 
-
-    // ENSURE THAT TARGET IS NOT IN CACHE
-    // check if target is currently being compiled
-    // if true:
-    //   wait untill it is no longer being compiled
-    // else:
-    //   add the target to the thing and proceed with the compilation
-
     let mut being_compiled = targets_compiling.lock().await;
     let path_to_executable =  if being_compiled.contains(&target_triple) {
         // drop the guard so someone else (hopefully the one compiling)
@@ -108,7 +112,7 @@ pub async fn send_binary(
 
         // busy wait for the target to leave the vector (be finished compiling)
         loop {
-            sleep(Duration::new(0,4)).await;
+            sleep(Duration::new(1,4)).await;
             let guard = targets_compiling.lock().await;
             if !guard.contains(&target_triple) {
                 break;
@@ -117,7 +121,7 @@ pub async fn send_binary(
         }
 
         // Sleep a bit extra just to be extra sure its made it into cache!
-        sleep(Duration::new(0,2)).await;
+        sleep(Duration::new(0, 2)).await;
 
         // get the (hopefully) compiled target from the cache
         cache.lock().await.get(&target_triple).unwrap()
@@ -127,6 +131,12 @@ pub async fn send_binary(
 
         // Drop the mutex to allow others trying to compile the same target access.
         drop(being_compiled);
+
+        // Clone the repo 
+        if let Err(e) = util::clone_repo(&repo_name, &target_triple).await {
+            error!(e);
+            return Err(e);
+        }
 
         // Compile the target, return the entire path to the the executable
         let executable_path = util::compile(&target_triple).await?;

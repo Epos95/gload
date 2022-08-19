@@ -19,9 +19,6 @@ pub mod util;
 use crate::cache::Cache;
 use crate::util::REPO_LOCATION;
 
-/// Represents the mutex for compilation.
-type CurrentlyCompiling = Arc<Mutex<()>>;
-
 type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 
 #[tokio::main]
@@ -38,7 +35,6 @@ async fn main() {
     let matches = command!()
         .arg(arg!(             [repo]    "The repo to compile and distribute"))
         .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
-        .arg(arg!(-d --develop           "Whether to always re-pull the pointed to repository"))
         .get_matches();
 
     // TODO: This arg should be mandatory at release!
@@ -46,10 +42,10 @@ async fn main() {
         .get_one::<String>("repo")
         .unwrap_or(&"https://github.com/Inventitech/helloworld.rs".to_string())
         .clone();
-    info!("Pointing to repo: {repo_name}");
+    info!("Pointing at repo: {repo_name}");
 
-    let should_recompile = matches.contains_id("develop");
-    if let Err(e) = util::ensure_repo_exists(&repo_name, should_recompile).await {
+    // Ensure that REPO_LOCATION exists and is empty.
+    if let Err(e) = util::restore_repo_location() {
         error!(e);
         return;
     }
@@ -63,7 +59,7 @@ async fn main() {
 
 
     let callback: Option<fn(String)> = Some(|x| {
-        let fname = format!("{REPO_LOCATION}/target/{x}");
+        let fname = format!("{REPO_LOCATION}/{x}");
         if let Err(e) = remove_dir_all(&fname) {
             info!("Callback failed to delete file: {fname} with error: {e:#?}");
         } else {
@@ -76,7 +72,9 @@ async fn main() {
         Cache::new(Duration::new(time_out, 0), callback).await,
     ));
 
-    let currently_compiling: CurrentlyCompiling = Arc::new(Mutex::new(()));
+    // Create the protected vector to store the currently compiling targets in
+    // with capacity since we will NEVER store more than 99 targets at the same time.
+    let targets_compiling = Arc::new(Mutex::new(Vec::<String>::with_capacity(99)));
 
     // build our application with some routes
     let app = Router::new()
@@ -86,7 +84,7 @@ async fn main() {
         .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))
-        .layer(Extension(currently_compiling));
+        .layer(Extension(targets_compiling));
 
     // run it
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));

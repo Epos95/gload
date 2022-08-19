@@ -83,34 +83,9 @@ pub async fn return_file(
     Ok((headers, body))
 }
 
-
-// TODO: Since we clone the repo on the fly now that we compile multiple targets at the same time 
-//       this needs to be rewritten/repurposed
-pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> Result<(), String> {
+/// Destroys and restores the repo_location folder so that it can be used again.
+pub fn restore_repo_location() -> Result<(), String> {
     info!("Checking repo availiability...");
-
-    if !should_recompile {
-        if PathBuf::from(REPO_LOCATION).exists() {
-            let mut file_descriptor = File::open(format!("{REPO_LOCATION}/Cargo.toml"))
-                .await
-                .unwrap();
-
-            let mut string = String::new();
-            file_descriptor.read_to_string(&mut string).await.unwrap();
-            let executable_name = string.split('\n').find(|s| s.contains("name")).unwrap();
-            let executable_name = executable_name
-                .split('=')
-                .last()
-                .unwrap()
-                .replace('\"', "")
-                .replace(' ', "");
-
-            if repo_name.contains(&executable_name) {
-                info!("Repo exists!");
-                return Ok(());
-            }
-        }
-    }
 
     if let Err(e) = fs::remove_dir_all(REPO_LOCATION) {
         let kind = e.kind();
@@ -120,15 +95,27 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
         // really doesnt matter to us at this point
         match kind {
             ErrorKind::NotFound => {},
-            _ => {Err(e).unwrap()}
+            _ => {return Err(e.to_string());}
         }
     }
 
-    info!("Cloning repo to: \"{REPO_LOCATION}\"");
+    if let Err(e) = fs::create_dir(REPO_LOCATION) {
+        return Err(e.to_string());
+    }
+
+    info!("Succesfully restored repo");
+
+    Ok(())
+}
+
+/// Should clone the `repo_name` into `repo_location/target_name`.
+pub async fn clone_repo(repo_name: &String, target_name: &String) -> Result<(), String> {
+    let location = format!("{REPO_LOCATION}/{target_name}");
+    info!("Cloning repo to: \"{location}\"");
     let git_output = Command::new("git")
         .arg("clone")
         .arg(repo_name)
-        .arg(REPO_LOCATION)
+        .arg(location)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();
@@ -148,8 +135,8 @@ pub async fn ensure_repo_exists(repo_name: &String, should_recompile: bool) -> R
             }
         }
         Err(e) => {
-            error!("Error: {e:?}");
-            return Err(format!("Error: {e:?}"));
+            error!("Error cloning the repo:  {e:?}");
+            return Err(format!("Error cloning the repo: {e:?}"));
         }
     }
 
@@ -162,9 +149,6 @@ pub async fn compile(
     target_triple: &String,
 ) -> Result<PathBuf, String> {
     info!("{target_triple} is not in cache, adding and compiling it now!");
-
-    // TODO: So we CAN compile multiple things at the same time, blockage only occurs waiting for a lock file
-    //       however we need multiple repos for this... so basically everything about REPO_LOCATION is wrong
 
     // need some way to get the "building" part of cargo output
     let s = Command::new("cross")
