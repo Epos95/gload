@@ -161,7 +161,7 @@ pub async fn send_binary(
         .into_os_string()
         .into_string()
         .unwrap()
-        .split("/")
+        .split('/')
         .last()
         .unwrap()
         .to_string();

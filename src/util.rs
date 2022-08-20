@@ -34,7 +34,7 @@ pub async fn is_valid_target(target_triple: &String) -> Option<String> {
         let results = Command::new("rustup")
             .arg("target")
             .arg("add")
-            .arg(format!("{target_triple}"))
+            .arg(target_triple)
             .status()
             .await
             .ok()?;
