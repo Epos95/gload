@@ -37,9 +37,8 @@ async fn main() {
 
     // TODO: Still need debug calls
     let sub = tracing_subscriber::FmtSubscriber::builder()
-        .with_line_number(true)
         .with_level(true)
-        .pretty()
+        .with_target(false)
         .with_max_level(log_level)
         .finish();
 
@@ -82,7 +81,7 @@ async fn main() {
         if let Err(e) = remove_dir_all(&fname) {
             info!("Callback failed to delete file: {fname} with error: {e:#?}");
         } else {
-            info!("Erased \"{fname}\"");
+            info!("Erased \"{fname}\" from cache.");
         }
     });
 
