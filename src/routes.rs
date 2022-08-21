@@ -8,7 +8,7 @@ use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, fs::{OpenOptions, self}, time::Duration};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex, time::sleep};
-use tracing::{error, info};
+use tracing::{error, info, debug};
 
 use crate::cache::Cache ;
 use crate::util;
@@ -100,6 +100,8 @@ pub async fn send_binary(
     let cache_guard = cache.lock().await;
     if let Some(path) = cache_guard.get(&target_triple) {
         let path_but_string = &path.into_os_string().into_string().unwrap();
+        debug!("Found path: {path_but_string} in cache");
+        info!("Returning file.");
         return util::return_file(&target_triple, path_but_string).await;
     }
     drop(cache_guard);
@@ -111,6 +113,7 @@ pub async fn send_binary(
         drop(being_compiled);
 
         // busy wait for the target to leave the vector (be finished compiling)
+        debug!("Waiting on compilation lock.");
         loop {
             sleep(Duration::new(1,4)).await;
             let guard = targets_compiling.lock().await;
@@ -119,6 +122,7 @@ pub async fn send_binary(
             }
             drop(guard);
         }
+        debug!("compilation finished, proceeding.");
 
         // Sleep a bit extra just to be extra sure its made it into cache!
         sleep(Duration::new(0, 2)).await;
@@ -126,6 +130,7 @@ pub async fn send_binary(
         // get the (hopefully) compiled target from the cache
         cache.lock().await.get(&target_triple).unwrap()
     } else {
+        debug!("Pushing target triple to lock vector");
         // add the target_triple to the vector to indicate that it is being compiled.
         being_compiled.push(target_triple.clone());
 
@@ -133,17 +138,20 @@ pub async fn send_binary(
         drop(being_compiled);
 
         // Clone the repo 
+        info!("Cloning repo to: \"{repo_name}/{target_triple}\"");
         if let Err(e) = util::clone_repo(&repo_name, &target_triple).await {
             error!(e);
             return Err(e);
         }
 
         // Compile the target, return the entire path to the the executable
+        info!("{target_triple} is not in cache, adding and compiling it now!");
         let executable_path = util::compile(&target_triple).await?;
 
         info!("Compiled, now Inserting {target_triple} into cache");
         // NOTE: this might still be premature since we have not called
         //       return_file() but i can solve that later in that case
+        debug!("Waiting on cache lock");
         cache.lock().await.insert(
             target_triple.clone(),
             executable_path.clone(),
@@ -166,8 +174,8 @@ pub async fn send_binary(
         .unwrap()
         .to_string();
 
-    let file = util::return_file(&target_triple, &name).await?;
-    Ok(file)
+    info!("Returning file.");
+    util::return_file(&target_triple, &name).await
 }
 
 pub async fn status(

@@ -5,11 +5,12 @@ use axum::body::StreamBody;
 use http::{header, HeaderMap, HeaderValue};
 use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
-use tracing::{error, info};
+use tracing::{error, debug};
 
 pub const REPO_LOCATION: &str = "repo_to_compile";
 
 pub async fn is_valid_target(target_triple: &String) -> Option<String> {
+    debug!("Trying to validate target: {target_triple}");
     // Check if toolchain is installed,
     // if installed, just return it
     // it not installed, try to install it
@@ -25,6 +26,7 @@ pub async fn is_valid_target(target_triple: &String) -> Option<String> {
     let toolchain_exists = output.contains(target_triple);
 
     if !toolchain_exists {
+        debug!("Toolchain does not exist, adding now.");
         // add the toolchain
         // This only adds the toolchain, not installed...
         //
@@ -59,6 +61,7 @@ pub async fn return_file(
     // At this point we can be sure that the file exists
     // and that we can grab it safely (hopefully)!
     let fname = format!("{REPO_LOCATION}/{target_triple}/target/{target_triple}/release/{executable_name}",);
+    debug!("Returning filename: {fname}");
     let file = match File::open(&fname).await {
         Ok(f) => f,
         Err(_) => {
@@ -79,13 +82,12 @@ pub async fn return_file(
     headers.insert(header::CONTENT_TYPE, ctype);
     headers.insert(header::CONTENT_DISPOSITION, disposition);
 
-    info!("Returning exeutable: {executable_name}");
     Ok((headers, body))
 }
 
 /// Destroys and restores the repo_location folder so that it can be used again.
 pub fn restore_repo_location() -> Result<(), String> {
-    info!("Checking repo availiability...");
+    debug!("Checking repo availiability...");
 
     if let Err(e) = fs::remove_dir_all(REPO_LOCATION) {
         let kind = e.kind();
@@ -103,7 +105,7 @@ pub fn restore_repo_location() -> Result<(), String> {
         return Err(e.to_string());
     }
 
-    info!("Succesfully restored repo");
+    debug!("Succesfully restored repo");
 
     Ok(())
 }
@@ -111,7 +113,6 @@ pub fn restore_repo_location() -> Result<(), String> {
 /// Should clone the `repo_name` into `repo_location/target_name`.
 pub async fn clone_repo(repo_name: &String, target_name: &String) -> Result<(), String> {
     let location = format!("{REPO_LOCATION}/{target_name}");
-    info!("Cloning repo to: \"{location}\"");
     let git_output = Command::new("git")
         .arg("clone")
         .arg(repo_name)
@@ -148,7 +149,6 @@ pub async fn clone_repo(repo_name: &String, target_name: &String) -> Result<(), 
 pub async fn compile(
     target_triple: &String,
 ) -> Result<PathBuf, String> {
-    info!("{target_triple} is not in cache, adding and compiling it now!");
 
     // need some way to get the "building" part of cargo output
     let s = Command::new("cross")
@@ -165,6 +165,7 @@ pub async fn compile(
 
     // NOTE: This does NOT seem that healthy tbh
     if let Some(code) = s.code() {
+        debug!("return code: {code}");
         if code > 0 {
             error!("Cross returned error code: {code}");
             return Err(format!("Cross return error code: {code}"));
@@ -197,6 +198,7 @@ pub async fn get_executable_name(target_triple: &String) -> String {
 
     // Account for .exe extension on windows
     if target_triple.contains("windows") {
+        debug!("detected windows, adding .exe suffix");
         executable_name.push_str(".exe");
     }
 

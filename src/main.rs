@@ -75,6 +75,7 @@ async fn main() {
         .expect("Invalid argument!");
     info!("Cache timeout set to {time_out} seconds.");
 
+    info!("Log level set to: {log_level}");
 
     let callback: Option<fn(String)> = Some(|x| {
         let fname = format!("{REPO_LOCATION}/{x}");
