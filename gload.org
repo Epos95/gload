@@ -1,1 +1,33 @@
+#+EXPORT_FILE_NAME: /home/epos/Blog/templates/a_better_download_button.html
+#+HTML_HEAD: {{data['css']}}
+#+HTML: {{data['header']}}
+
 * Gload: A better download button
+** Why?
+During the summer I got re-absorbed (addicted) to Genshin Impact again, through some ADHD-train of thought I got to thinking about distributing a program written to /help/ someone play Genshin Impact more efficiently.
+
+This was influenced by some posts on Reddit about how terrible it was for non-programmers to download software from and use GitHub in general, so I got to thinking about the alternatives which we already have.
+** How would you do it in 2022?
+*** So how would I publish a program I wrote for common usage?
+Previously ([[https://github.com/epos95/byggis.git][hint, hint]]) I have used ~cargo~ and its excellent
+#+begin_src bash
+cargo install <package>
+#+end_src
+functionality.
+
+This works great! Cargo makes it easy to install and distribute Rust applications, the problem comes from the fact that it requires ~cargo~ to be installed, something which non-programmers often do not.
+*** So what are some of the better alternatives?
+There are of course file hosting sites such as [[https://sourceforge.net/][sourceforge]], but considering how the number 2 google search containing sourceforge is "sourceforge safe" I would not count this as a good alternative. (WARNING: Strictly personal opinion to justify this entire program.)
+
+You could also host pre-compiled executable files for each operating system inside your git repository (or on any other file hosting service availible to the user), this poses issues in that the user would most likely need to choose which executable to download.
+This can't be assumed to be true for a given user so I would not count this as a good alternative either.
+
+* Writing Gload
+** The requirements for the program
+- Lowest common denominator of usage for the users. Anyone should be able to use the service.
+- Not be shady. The user should not feel like they are at use of getting a virus while downloading.
+- Be aware of different user architectures. The service should make sure that the user gets the correct executable for the machine they are connecting from.
+- Offload all the compilation from the user. The user should not have to install a compiler or toolchain to run or get the program on their computer.
+
+** The stack of the program
+** Program architecture
