@@ -10,7 +10,7 @@ use axum::{
 use clap::{arg, command};
 use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
-use tracing::{error, info};
+use tracing::{error, info, metadata::LevelFilter};
 
 pub mod cache;
 pub mod routes;
@@ -23,8 +23,30 @@ type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 
 #[tokio::main]
 async fn main() {
-    // TODO: Better logging with tracing!
-    tracing_subscriber::fmt::init();
+    let matches = command!()
+        .arg(arg!(             [repo]    "The repo to compile and distribute"))
+        .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
+        .arg(arg!(debug: -d --debug      "Toggled debug output"))
+        .get_matches();
+
+    let log_level = if matches.contains_id("debug") {
+        LevelFilter::DEBUG
+    } else {
+        LevelFilter::INFO
+    };
+
+    // TODO: Still need debug calls
+    let sub = tracing_subscriber::FmtSubscriber::builder()
+        .with_line_number(true)
+        .with_level(true)
+        .pretty()
+        .with_max_level(log_level)
+        .finish();
+
+    tracing::subscriber::set_global_default(sub).unwrap();
+
+
+    //tracing_subscriber::fmt::init();
 
     if util::cross_not_found() {
         error!("the \"cross\" executable could not be found, is it installed and in path?");
@@ -33,10 +55,6 @@ async fn main() {
         info!("Cross found!");
     }
 
-    let matches = command!()
-        .arg(arg!(             [repo]    "The repo to compile and distribute"))
-        .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
-        .get_matches();
 
     // TODO: This arg should be mandatory at release!
     let repo_name = matches
