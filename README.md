@@ -16,7 +16,7 @@ So after realising all of the techincal limitations of cross compilation and stu
   * DONE: Need to actually use the cached path for something...
   * DONE: make it actually detect which repo is downloaded in repo_to_compile
   * DONE: A arg option for "development" where gload always pulls the repo
-  * actually grab the target-triple from the target 
+  * DONE: actually grab the target-triple from the target 
   * make docker work
   * A more reponsive download page (shows compilation progress etc)
   * Cleanup code

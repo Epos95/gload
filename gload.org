@@ -25,9 +25,9 @@ This can't be assumed to be true for a given user so I would not count this as a
 * Writing Gload
 ** The requirements for the program
 - Lowest common denominator of usage for the users. Anyone should be able to use the service.
-- Not be shady. The user should not feel like they are at use of getting a virus while downloading.
+- Not be /that/ shady. The user should not feel like they are at risk of getting a virus while downloading.
 - Be aware of different user architectures. The service should make sure that the user gets the correct executable for the machine they are connecting from.
 - Offload all the compilation from the user. The user should not have to install a compiler or toolchain to run or get the program on their computer.
 
-** The stack of the program
+** The technology used in the program
 ** Program architecture

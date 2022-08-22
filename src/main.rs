@@ -35,7 +35,6 @@ async fn main() {
         LevelFilter::INFO
     };
 
-    // TODO: Still need debug calls
     let sub = tracing_subscriber::FmtSubscriber::builder()
         .with_level(true)
         .with_target(false)
@@ -43,9 +42,6 @@ async fn main() {
         .finish();
 
     tracing::subscriber::set_global_default(sub).unwrap();
-
-
-    //tracing_subscriber::fmt::init();
 
     if util::cross_not_found() {
         error!("the \"cross\" executable could not be found, is it installed and in path?");
