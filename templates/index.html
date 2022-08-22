@@ -210,6 +210,9 @@
             // User is on mobile, show a error message or something
             alert("Sorry, this device is not supported!");
         } else {
+            // First user connects on /
+            // This makes the js grab the data and send it to /get_target which returns the target triple
+            // this retrieved target triple should then be used to connect to /get_binary/{target_triple} which downloads it
 
             console.log("os:      " + jscd.os);
             console.log("version: " + jscd.osVersion);
@@ -221,23 +224,27 @@
                 user_agent: navigator.userAgent
             };
 
+            let route = window.location.href+"get_target";
+            console.log(route);
+
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", window.location.href, true);
+            xhr.open("POST", route, true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(JSON.stringify(json));
 
-            var response;
             xhr.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
                     // This response will be the target triple needed
-                    response = this.responseText;
+                    response = JSON.parse(this.response);
+                    console.log(response);
+
+                    alert("Grabbed your CPU architecture, will now try to compile your application for you!");
+
+                    // If user is not on mobile then redirect to the proper place
+                    window.location.href = window.location.href + "get_binary/" + response.target_triple;
                 }
             };
 
-            alert("Grabbed your CPU architecture, will now try to compile your application for you!");
-
-            // If user is not on mobile then redirect to the proper place
-            //window.location.href = window.location.href + "get_binary/" + string;
         }
 
 

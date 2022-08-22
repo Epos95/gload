@@ -97,9 +97,14 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
-        .route("/", get(routes::get_target))
+        // Entry point for the application
+        .route("/", get(routes::get_index))
+        // Called by JS in index page
+        .route("/get_target", post(routes::get_target))
+        // Returns the actual compiled file
         .route("/get_binary/:path", get(routes::send_binary))
-        .route("/push", post(routes::recv).get(routes::get_target))
+
+        //.route("/push", post(routes::recv).get(routes::get_target))
         .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))

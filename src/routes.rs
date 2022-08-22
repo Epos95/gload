@@ -14,11 +14,26 @@ use crate::cache::Cache ;
 use crate::util;
 use crate::TargetsCompiling;
 
-pub async fn get_target() -> impl IntoResponse {
-    // TODO: Need to always use the linux linker for windows
-    //       e.h -gnu and not -msvc
-    // Send the html of the page which gets the target triple
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(dead_code)]
+pub struct PostData {
+    os: String,
+    os_version: String,
+    user_agent: String,
+}
 
+#[derive(Debug, Deserialize, Serialize)]
+#[allow(dead_code)]
+pub struct ResponseData {
+    target_triple: String
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct PostDataHolder{ post_data: Vec<PostData> }
+
+
+pub async fn get_index() -> impl IntoResponse {
+    // Send the html of the page which gets the target triple
     let mut file = File::open("templates/index.html").await.unwrap();
     let mut html = String::new();
     file.read_to_string(&mut html).await.unwrap();
@@ -29,16 +44,47 @@ pub async fn get_target() -> impl IntoResponse {
         .unwrap()
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[allow(dead_code)]
-pub struct PostData {
-    os: String,
-    os_version: String,
-    user_agent: String,
-}
+pub async fn get_target(Json(json): Json<PostData>) -> Result<impl IntoResponse, String> {
+    debug!("Recieved {json:?} on get_target");
+    // Use this pattern so that we can tweak each part of the target_triple
+    // individually for weird edge cases and things.
 
-#[derive(Debug, Deserialize, Serialize)]
-struct PostDataHolder{ post_data: Vec<PostData>}
+    let architecture = if json.user_agent.contains("x64") || json.user_agent.contains("x86_64") || json.os == "Mac OS X" {
+        "x86_64"
+    } else {
+        debug!("32bit architecture detected, might give errors");
+        debug!("json in question: {json:?}");
+        "i686"
+    };
+
+    // Assume 64 bit computer
+    let middle = match json.os.as_str() {
+        "Mac OS X" => "apple",
+        "Windows" => "pc-windows",
+        "Linux" => "unknown-linux",
+        _ => {
+            error!("Failed to match middlepart for: {}", json.os);
+            return Err("Sorry! We failed to compute target triple for your pc!".to_string());
+        }
+    };
+
+    let toolchain = match json.os.as_str() {
+        "Mac OS X" => "darwin",
+        "Windows" => "gnu",
+        "Linux" => "gnu",
+        _ => {
+            error!("Failed to match toolchain for: {}", json.os);
+            return Err("Sorry! We failed to compute target triple for your pc!".to_string());
+        }
+    };
+
+
+    let target_triple = vec![architecture, middle, toolchain].join("-");
+    info!("Guessed target_triple: {target_triple}");
+
+    Ok(Json(ResponseData { target_triple }))
+    // Return a ResponseData
+}
 
 
 // From the data sent here the server should respond with a token for which specific file to download
