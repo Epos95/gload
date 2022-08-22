@@ -22,6 +22,11 @@ There are of course file hosting sites such as [[https://sourceforge.net/][sourc
 You could also host pre-compiled executable files for each operating system inside your git repository (or on any other file hosting service availible to the user), this poses issues in that the user would most likely need to choose which executable to download.
 This can't be assumed to be true for a given user so I would not count this as a good alternative either.
 
+** Finally introducing Gload:
+Gload is the service I wrote in Rust to try and remedy the earlier mentioned problems! It is build around the scenario of some developer having some code they want to share effortlessly. It assumes that the dev has access to some sort of simple hosting for the Gload service but nothing else.
+
+Gload grabs the users' CPU architecture to compute the target triple [link to rust docs here] for that computer and then uses Cross [link here] to compile for that specific architecture and then returns the program to the user, all with minimal input from the user!
+
 * Writing Gload
 ** The requirements for the program
 - Be easy to use for anyone. Anyone should be able to use the service.
@@ -34,3 +39,7 @@ Since the specifications demanded minimal input from the user a webserver seemed
 Normally everything from the people at Tokio is /excellent/ and Axum is no exception, however I have always been a bit unfamiliar with the async ecosystem in Rust so this was a space I was happy to dive into more.
 
 ** Program architecture
+
+* Deeper implementation details
+
+* Personal take-aways from the project
