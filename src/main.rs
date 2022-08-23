@@ -58,6 +58,9 @@ async fn main() {
         .clone();
     info!("Pointing at repo: {repo_name}");
 
+    // TODO: Keep the repo updated if a push occurs while the server is running
+    //       probably best done by spawning a task which continously polls the repo
+    //       for updates and re-pulls if it is outdated.
     // Ensure that REPO_LOCATION exists and is empty.
     if let Err(e) = util::restore_repo_location() {
         error!(e);

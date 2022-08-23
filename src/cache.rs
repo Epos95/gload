@@ -34,6 +34,8 @@ impl Cache {
     pub async fn new(data_timeout: Duration, callback: Option<Callback>) -> Self {
         let hmap: DB = Arc::new(Mutex::new(HashMap::new()));
 
+        // TODO: Negative Duration should mean no timeout
+
         // For each new cache, spawn a loop which erases all data when it excedes the deadlines.
         let h = hmap.clone();
         tokio::spawn(async move {
