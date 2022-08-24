@@ -38,11 +38,11 @@ Gload grabs the users' CPU architecture to compute the target triple [link to ru
 Since the specifications demanded minimal input from the user a webserver seemed like a great choice for hosting this service. The webserver space in Rust is very interesting with two of the most famous Rust webserver frameworks being in the top 10 fastest in the world according to [[https://www.techempower.com/benchmarks/#section=data-r21&test=composite][techempover.com]]. While speed was not critical for this service I had been seeing some talk about [[https://github.com/tokio-rs/axum][Axum]] on my Twitter timeline from the wonderful [[https://fasterthanli.me/https://fasterthanli.me/][fasterthanlime]] so I decided to try that.
 Normally everything from the people at Tokio is /excellent/ and Axum is no exception, however I have always been a bit unfamiliar with the async ecosystem in Rust so this was a space I was happy to dive into more.
 
-Gload also uses Cross [link here] to reliably cross compile the binaries. Cross utilizes Docker and is great for when the normall cross compilation feature for cargo might run into linker issues. (I am sure that you can setup cargo with proper linkers and toolchain to reliably cross compile and this might be a point to improve if I revisit the program at a later point.)
+Gload also uses [[https://github.com/cross-rs/cross][Cross]] to reliably cross compile the binaries. Cross utilizes Docker and is great for when the normall cross compilation feature for cargo might run into linker issues. (I am sure that you can setup cargo with proper linkers and toolchain to reliably cross compile and this might be a point to improve if I revisit the program at a later point.)
 
 To detect the architecture of the target machine I found [[http://jsfiddle.net/ChristianL/AVyND/][this fiddle]], which retrieved the relevant information, and in true programmer fashion, stole it. This let me get the target triple of the client reliably.
 
-# info on cache here
+For the caching part of Gload I decided to write my own cache. This cache is very simply and is just a wrapper around a hashmap implementation of the programmers choice.
 
 ** Program architecture
 *** The 0th iteration
@@ -52,8 +52,8 @@ While starting to write on Gload I first tested all the different components in 
  - Cross compile files programmatically.
 and since I was able to prove all of these I had all the simple parts to start building the program.
 
-*** The earliest iteration
-After having proved that the parts of the program work I felt comfortable with investing more time since it meant the complete program also /should/ work (although this was a bit of a mistake on my part).
+*** The next iteration
+After having proved that the parts of the program worked I felt comfortable with investing more time since it meant that the complete program hopefully /should/ work (although this was a bit of a mistake on my part).
 At this point I combined all of the parts of the project by building a minimalist axum server like so:
 
 #+begin_src rust
