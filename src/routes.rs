@@ -147,15 +147,22 @@ pub async fn send_binary(
     if let Some(path) = cache_guard.get(&target_triple) {
         let path_but_string = &path.into_os_string().into_string().unwrap();
         debug!("Found path: {path_but_string} in cache");
+        let name = path_but_string
+            .split('/')
+            .last()
+            .unwrap()
+            .to_string();
         info!("Returning file.");
-        return util::return_file(&target_triple, path_but_string).await;
+        return util::return_file(&target_triple, &name).await;
     }
     drop(cache_guard);
 
     let mut being_compiled = targets_compiling.lock().await;
     let path_to_executable =  if being_compiled.contains(&target_triple) {
+        // Compilation is currently occuring.
+
         // drop the guard so someone else (hopefully the one compiling)
-        // can take it and finish the compilation
+        // can take it and finish the occuring compilation
         drop(being_compiled);
 
         // busy wait for the target to leave the vector (be finished compiling)
@@ -176,6 +183,8 @@ pub async fn send_binary(
         // get the (hopefully) compiled target from the cache
         cache.lock().await.get(&target_triple).unwrap()
     } else {
+        // Compilation is not occuring, needs to be done.
+
         debug!("Pushing target triple to lock vector");
         // add the target_triple to the vector to indicate that it is being compiled.
         being_compiled.push(target_triple.clone());

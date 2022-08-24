@@ -25,7 +25,7 @@ type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 async fn main() {
     let matches = command!()
         .arg(arg!(             [repo]    "The repo to compile and distribute"))
-        .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! (defaults to 1024 seconds)"))
+        .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)"))
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
         .get_matches();
 
@@ -72,7 +72,12 @@ async fn main() {
         .unwrap_or(&1024.to_string())
         .parse::<u64>()
         .expect("Invalid argument!");
-    info!("Cache timeout set to {time_out} seconds.");
+
+    if time_out == 0 {
+        info!("Cache timeout not set, data will not go out of cache.");
+    } else {
+        info!("Cache timeout set to {time_out} seconds.");
+    }
 
     info!("Log level set to: {log_level}");
 
