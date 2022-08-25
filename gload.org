@@ -42,7 +42,7 @@ Gload also uses [[https://github.com/cross-rs/cross][Cross]] to reliably cross c
 
 To detect the architecture of the target machine I found [[http://jsfiddle.net/ChristianL/AVyND/][this fiddle]], which retrieved the relevant information, and in true programmer fashion, stole it. This let me get the target triple of the client reliably.
 
-For the caching part of Gload I decided to write my own cache. This cache is very simply and is just a wrapper around a hashmap implementation of the programmers choice.
+For the caching part of Gload I decided to write my own cache. This cache is very simple and is just a wrapper around a hashmap implementation of the programmers choice.
 
 ** Program architecture
 *** The 0th iteration
@@ -77,6 +77,20 @@ fn get_binary(Path(target_triple): Path<String>) -> impl IntoResponse {
         .arg("b")
 }
 #+end_src
+
+*** Putting it all together
+So after having tried /most/ of the individual parts of Gload and making sure they work as expected I started putting it all together.
+The final structure of the service goes something like this:
+ 1. Programmer starts Gload on his server, pointing to the repository he wants people to download.
+ 2. Gload then starts up and setups the environment, such as by cloning the repository.
+ 3. User connects to the server on root ("/") route
+ 4. Server responds with the HTML document which gets information about the users machine.
+ 5. The HTML/JS sends the information to the "/get_target" route which responds with the correct target triple.
+ 6. The HTML/JS redirects the user to the "/get_binary/<path>" route which starts the compilation and download for the binary.
+ 7. Gload checks if the target triple is in cache and returns it if it is.
+ 8. Gload starts up Cross to compile the binary.
+ 9. Gload returns the compiled binary and adds it to cache.
+
 
 * Deeper implementation details
 
