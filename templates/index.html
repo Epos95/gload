@@ -192,20 +192,6 @@
         flashVersion: flashVersion
     };
 }(this));
-        /*
-        let string =  'OS: ' + jscd.os +' '+ jscd.osVersion + '\n' +
-            'Mobile: ' + jscd.mobile + '\n' +
-            'Full User Agent: ' + navigator.userAgent;
-        */
-
-        // TODO: actually compute the target triple 
-        // just straight up get the target triple from the user agent here and
-        // then send it with the /get_binary/{target} thing. If we want something
-        // smarter we first have to defeat / understand CORS with axum...
-        // 
-        // Here are some examples:
-        // Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0 = x86_64-unknown-linux-gnu
-
         if (jscd.mobile) {
             // User is on mobile, show a error message or something
             alert("Sorry, this device is not supported!");
@@ -242,6 +228,8 @@
 
                     // If user is not on mobile then redirect to the proper place
                     window.location.href = window.location.href + "get_binary/" + response.target_triple;
+                    // TODO: instead of redirecting, use a async call to axios to do the download in the
+                    //       background and thus get a bit more of a responsive download
                 }
             };
 

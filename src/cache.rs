@@ -34,8 +34,6 @@ impl Cache {
     pub async fn new(data_timeout: Duration, callback: Option<Callback>) -> Self {
         let hmap: DB = Arc::new(Mutex::new(HashMap::new()));
 
-        // TODO: zero duration should mean no timeout
-
         // For each new cache, spawn a loop which erases all data when it excedes the deadlines.
         // Only do this when the duration is greater than 0, 0 should mean no timeout.
         if !data_timeout.is_zero() {

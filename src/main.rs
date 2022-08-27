@@ -24,7 +24,7 @@ type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 #[tokio::main]
 async fn main() {
     let matches = command!()
-        .arg(arg!(             [repo]    "The repo to compile and distribute"))
+        .arg(arg!(             <repo>    "The repo to compile and distribute"))
         .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)"))
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
         .get_matches();
@@ -50,17 +50,12 @@ async fn main() {
         info!("Cross found!");
     }
 
-
-    // TODO: This arg should be mandatory at release!
     let repo_name = matches
         .get_one::<String>("repo")
-        .unwrap_or(&"https://github.com/Inventitech/helloworld.rs".to_string())
+        .unwrap()
         .clone();
     info!("Pointing at repo: {repo_name}");
 
-    // TODO: Keep the repo updated if a push occurs while the server is running
-    //       probably best done by spawning a task which continously polls the repo
-    //       for updates and re-pulls if it is outdated.
     // Ensure that REPO_LOCATION exists and is empty.
     if let Err(e) = util::restore_repo_location() {
         error!(e);
