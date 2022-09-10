@@ -88,17 +88,6 @@ async fn main() {
 
     info!("Log level set to: {log_level}");
 
-    /*
-    let callback: Option<fn(String)> = Some(|x| {
-        let fname = format!("{REPO_LOCATION}/{x}");
-        if let Err(e) = remove_dir_all(&fname) {
-            info!("Callback failed to delete file: {fname} with error: {e:#?}");
-        } else {
-            info!("Erased \"{fname}\" from cache.");
-        }
-    });
-    */
-
     // GODAHMN this is hacky
     let thing = Box::new(repo_location.clone());
     let dummy = Box::leak(thing.clone());
@@ -128,7 +117,6 @@ async fn main() {
         .route("/get_target", post(routes::get_target))
         // Returns the actual compiled file
         .route("/get_binary/:path", get(routes::send_binary))
-        .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))
         .layer(Extension(repo_location))

@@ -197,7 +197,3 @@ pub async fn send_binary(
     info!("Returning file.");
     util::return_file(&target_triple, &name, &repo_location).await
 }
-
-pub async fn status() -> impl IntoResponse {
-    "status here"
-}
