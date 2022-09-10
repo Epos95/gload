@@ -88,7 +88,7 @@ impl Cache {
             }
         }
 
-        self.hmap.lock().unwrap().get(k).map(|v| (*v).path.clone())
+        self.hmap.lock().unwrap().get(k).map(|v| v.path.clone())
     }
 
     /// Inserts a [k] and [v] into the [Cache](`Cache`).

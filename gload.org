@@ -1,6 +1,4 @@
-#+EXPORT_FILE_NAME: /home/epos/Blog/templates/a_better_download_button.html
-#+HTML_HEAD: {{data['css']}}
-#+HTML: {{data['header']}}
+#+TITLE: A better download button
 
 * Gload: A better download button
 ** Why?
@@ -57,24 +55,47 @@ After having proved that the parts of the program worked I felt comfortable with
 At this point I combined all of the parts of the project by building a minimalist axum server like so:
 
 #+begin_src rust
-// Imports omited
+// Imports omitted
+
 #[tokio::main]
 async fn main() {
     // clone repo here
 
     let app = Router::new()
-        .route("/:target_triple", get(get_binary));
-    let addr = SocketAddr::from(([0,0,0,0], 3000));
+        .route("/:target_triple", get(return_binary));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
 }
 
-fn get_binary(Path(target_triple): Path<String>) -> impl IntoResponse {
-    // assume repo exists
-    Command::new("cross")
+fn return_binary(Path(target_triple): Path<String>) -> impl IntoResponse {
+    // assume repository exists as "repo"
+    let _ = Command::new("cross")
         .arg("b")
+        .arg("--manifest-path repo/Cargo.toml")
+        .status()
+        .await
+        .unwrap();
+
+    // error handling omitted
+
+    let file = File::open(&fname).await.unwrap();
+
+    // make the file into a body through axum and magic
+    let stream = ReaderStream::new(file);
+    let body = StreamBody::new(stream);
+
+    // Create appropriate headers
+    let disposition =
+        HeaderValue::from_str(&format!("attachment; filename=repo")).unwrap();
+    let ctype = HeaderValue::from_str("").unwrap();
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, ctype);
+    headers.insert(header::CONTENT_DISPOSITION, disposition);
+
+    Ok((headers, body))
 }
 #+end_src
 
@@ -85,14 +106,18 @@ The final structure of the service goes something like this:
  2. Gload then starts up and setups the environment, such as by cloning the repository.
  3. User connects to the server on root ("/") route
  4. Server responds with the HTML document which gets information about the users machine.
- 5. The HTML/JS sends the information to the "/get_target" route which responds with the correct target triple.
- 6. The HTML/JS redirects the user to the "/get_binary/<path>" route which starts the compilation and download for the binary.
+ 5. The HTML/JS sends the information to the "~/get_target~" route which responds with the correct target triple.
+ 6. The HTML/JS redirects the user to the "~/get_binary/<path>~" route which starts the compilation and download for the binary.
  7. Gload checks if the target triple is in cache and returns it if it is.
  8. Gload starts up Cross to compile the binary.
  9. Gload returns the compiled binary and adds it to cache.
-
+ 10. After ~n~ seconds Gload (optionally) removes the binary from cache to save space on the server.
 
 * Deeper implementation details
+
+** The Cache
+
+** The synchronisation scheme
 
 * Personal take-aways from the project
 ** Taking it a bit slower
