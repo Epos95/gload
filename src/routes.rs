@@ -7,7 +7,6 @@ use axum::{
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::{
-    fs::{self, OpenOptions},
     path::PathBuf,
     sync::Arc,
     time::Duration,
@@ -29,11 +28,6 @@ pub struct PostData {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ResponseData {
     target_triple: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct PostDataHolder {
-    post_data: Vec<PostData>,
 }
 
 pub async fn get_index() -> impl IntoResponse {
@@ -89,29 +83,6 @@ pub async fn get_target(Json(json): Json<PostData>) -> Result<impl IntoResponse,
     info!("Guessed target_triple: {target_triple}");
 
     Ok(Json(ResponseData { target_triple }))
-}
-
-// From the data sent here the server should respond with a token for which specific file to download
-// the token can then be used by GETting a route with the token as a parameter or something :D
-// This token could probably be the target_triple, which would prolly work out nicely.
-pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
-    // maybe write
-    info!("Recvd: {json:#?}");
-
-    let data = fs::read_to_string("data.json").unwrap();
-    let mut vector: PostDataHolder = serde_json::from_str(&data).unwrap();
-
-    vector.post_data.push(json);
-
-    // Log the target triples recvd
-    let fd = OpenOptions::new()
-        .append(false)
-        .write(true)
-        .open("data.json")
-        .unwrap();
-    serde_json::to_writer_pretty(fd, &vector).unwrap();
-
-    "wow"
 }
 
 pub async fn send_binary(

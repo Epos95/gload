@@ -128,7 +128,6 @@ async fn main() {
         .route("/get_target", post(routes::get_target))
         // Returns the actual compiled file
         .route("/get_binary/:path", get(routes::send_binary))
-        //.route("/push", post(routes::recv).get(routes::get_target))
         .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))
@@ -138,7 +137,6 @@ async fn main() {
 
     // run it
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    //let addr = SocketAddr::from(([192, 168, 10, 135], 30000));
     info!("Listening on ip: {addr}");
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
