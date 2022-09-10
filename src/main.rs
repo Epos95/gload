@@ -7,8 +7,9 @@ use axum::{
     routing::{get, post},
     Extension, Router,
 };
+use cache::Callback;
 use clap::{arg, command};
-use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration};
+use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration, path::PathBuf};
 use tokio::sync::Mutex;
 use tracing::{error, info, metadata::LevelFilter};
 
@@ -17,7 +18,6 @@ pub mod routes;
 pub mod util;
 
 use crate::cache::Cache;
-use crate::util::REPO_LOCATION;
 
 type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 
@@ -27,6 +27,7 @@ async fn main() {
         .arg(arg!(             <repo>    "The repo to compile and distribute"))
         .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)"))
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
+        .arg(arg!(-p --path [path] "The path to place \"repo_to_compile\" in. (defauls to \"./repo_to_compile\""))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -50,6 +51,19 @@ async fn main() {
         info!("Cross found!");
     }
 
+    let mut repo_location: PathBuf = PathBuf::from(
+        matches.get_one::<String>("path")
+        .unwrap_or(&"./".to_string())
+        .clone());
+    if !repo_location.exists() {
+        error!("The location: {repo_location:?} does not exist!");
+        std::process::exit(0);
+    } else {
+        info!("Found location {repo_location:?}");
+    }
+    repo_location.push("repo_to_compile");
+
+
     let repo_name = matches
         .get_one::<String>("repo")
         .unwrap()
@@ -57,7 +71,7 @@ async fn main() {
     info!("Pointing at repo: {repo_name}");
 
     // Ensure that REPO_LOCATION exists and is empty.
-    if let Err(e) = util::restore_repo_location() {
+    if let Err(e) = util::restore_repo_location(&repo_location) {
         error!(e);
         return;
     }
@@ -76,6 +90,7 @@ async fn main() {
 
     info!("Log level set to: {log_level}");
 
+    /*
     let callback: Option<fn(String)> = Some(|x| {
         let fname = format!("{REPO_LOCATION}/{x}");
         if let Err(e) = remove_dir_all(&fname) {
@@ -84,6 +99,19 @@ async fn main() {
             info!("Erased \"{fname}\" from cache.");
         }
     });
+    */
+
+    // GODAHMN this is hacky
+    let thing = Box::new(repo_location.clone());
+    let dummy = Box::leak(thing.clone());
+    let callback: Option<Callback> = Some(Box::new(|x| {
+        let fname = dummy.join(x).into_os_string().into_string().unwrap();
+        if let Err(e) = remove_dir_all(&fname) {
+            info!("Callback failed to delete file: {fname} with error: {e:#?}");
+        } else {
+            info!("Erased \"{fname}\" from cache.");
+        }
+    }));
 
     // Create cache
     let cache = Arc::new(Mutex::new(
@@ -107,6 +135,8 @@ async fn main() {
         .route("/status", get(routes::status))
         .layer(Extension(cache))
         .layer(Extension(repo_name))
+        .layer(Extension(repo_location))
+        .layer(Extension(matches.contains_id("debug")))
         .layer(Extension(targets_compiling));
 
     // run it

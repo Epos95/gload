@@ -7,8 +7,6 @@ use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
 use tracing::{error, debug};
 
-pub const REPO_LOCATION: &str = "repo_to_compile";
-
 pub async fn is_valid_target(target_triple: &String) -> Option<String> {
     debug!("Trying to validate target: {target_triple}");
     // Check if toolchain is installed,
@@ -57,11 +55,19 @@ pub async fn is_valid_target(target_triple: &String) -> Option<String> {
 pub async fn return_file(
     target_triple: &String,
     executable_name: &String,
+    repo_location: &PathBuf,
 ) -> Result<(HeaderMap, StreamBody<ReaderStream<File>>), String> {
     // At this point we can be sure that the file exists
     // and that we can grab it safely (hopefully)!
-    let fname = format!("{REPO_LOCATION}/{target_triple}/target/{target_triple}/release/{executable_name}",);
-    debug!("Returning filename: {fname}");
+    let fname = repo_location
+        .join(target_triple)
+        .join("target")
+        .join(target_triple)
+        .join("release")
+        .join(executable_name);
+    
+
+    debug!("Returning filename: {fname:?}");
     let file = match File::open(&fname).await {
         Ok(f) => f,
         Err(_) => {
@@ -86,10 +92,10 @@ pub async fn return_file(
 }
 
 /// Destroys and restores the repo_location folder so that it can be used again.
-pub fn restore_repo_location() -> Result<(), String> {
+pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
     debug!("Checking repo availiability...");
 
-    if let Err(e) = fs::remove_dir_all(REPO_LOCATION) {
+    if let Err(e) = fs::remove_dir_all(repo_location) {
         let kind = e.kind();
 
         // Handle errors which are recoverable (such as NotFound)
@@ -101,7 +107,7 @@ pub fn restore_repo_location() -> Result<(), String> {
         }
     }
 
-    if let Err(e) = fs::create_dir(REPO_LOCATION) {
+    if let Err(e) = fs::create_dir(repo_location) {
         return Err(e.to_string());
     }
 
@@ -111,17 +117,16 @@ pub fn restore_repo_location() -> Result<(), String> {
 }
 
 /// Should clone the `repo_name` into `repo_location/target_name`.
-pub async fn clone_repo(repo_name: &String, target_name: &String) -> Result<(), String> {
-    let location = format!("{REPO_LOCATION}/{target_name}");
+pub async fn clone_repo(repo_name: &String, target_name: &String, repo_location: &PathBuf) -> Result<(), String> {
     let git_output = Command::new("git")
         .arg("clone")
         .arg(repo_name)
-        .arg(location)
+        .arg(repo_location.join(target_name))
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();
 
-    // NOTE: could maybe simplifyy this match by using .and_then() or something
+    // NOTE: could maybe simplify this match by using .and_then() or something
     //       since we just need to apply a function to the value if its Ok(),
     //       otherwise we should print the error.
     match git_output {
@@ -148,7 +153,15 @@ pub async fn clone_repo(repo_name: &String, target_name: &String) -> Result<(), 
 /// Returns the path to the compiled executable file.
 pub async fn compile(
     target_triple: &String,
+    repo_location: &PathBuf,
+    debug: bool,
 ) -> Result<PathBuf, String> {
+
+    let (stdout, stderr) = if debug {
+        (Stdio::inherit(), Stdio::inherit())
+    } else {
+        (Stdio::null(), Stdio::null())
+    };
 
     // need some way to get the "building" part of cargo output
     // TODO: A way to print the stdout/stderr of cross for debug would be nice
@@ -156,10 +169,10 @@ pub async fn compile(
         .arg("b")
         .arg("--release")
         .arg("--manifest-path")
-        .arg(format!("{REPO_LOCATION}/{target_triple}/Cargo.toml"))
+        .arg(repo_location.join(target_triple).join("Cargo.toml"))
         .arg(format!("--target={target_triple}"))
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(stdout)
+        .stderr(stderr)
         .status()
         .await
         .expect("Failed to use cross.");
@@ -173,18 +186,19 @@ pub async fn compile(
         }
     }
 
-    let executable_name = get_executable_name(target_triple).await;
-    let executable_path = PathBuf::from(format!(
-        "{REPO_LOCATION}/target/{target_triple}/release/{executable_name}"
-    ));
-
+    let executable_name = get_executable_name(target_triple, repo_location).await;
+    let executable_path = repo_location
+        .join("target")
+        .join(target_triple)
+        .join("release")
+        .join(executable_name);
 
     Ok(executable_path)
 }
 
 /// Get a executables name via Cargo.toml to be /absolutely/ sure its the corrent name.
-pub async fn get_executable_name(target_triple: &String) -> String {
-    let mut file_descriptor = File::open(format!("{REPO_LOCATION}/{target_triple}/Cargo.toml"))
+pub async fn get_executable_name(target_triple: &String, repo_location: &PathBuf) -> String {
+    let mut file_descriptor = File::open(repo_location.join(target_triple).join("Cargo.toml"))
         .await
         .unwrap();
     let mut string = String::new();

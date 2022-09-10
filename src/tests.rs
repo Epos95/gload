@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use crate::cache;
 use crate::cache::Cache;
 use std::fs::File;
 use std::io::Read;
@@ -121,11 +122,11 @@ async fn cache_keepalive2() {
 
 #[tokio::test]
 async fn cache_callback() {
-    let cb: fn(String) = |x| {
+    let cb: cache::Callback = Box::new(|x| {
         let string = format!("{x} just went out cache!");
         let mut file = File::create("/tmp/testing_cache_thingy").unwrap();
         file.write_all(string.as_bytes()).unwrap();
-    };
+    });
 
     let mut c = Cache::new(Duration::new(1, 0), Some(cb)).await;
     c.insert("root".to_string(), PathBuf::from("/"));
@@ -142,11 +143,11 @@ async fn cache_callback() {
 #[tokio::test]
 async fn cache_callback2() {
     File::create("/tmp/testing_cache_thingy2").unwrap();
-    let cb: fn(String) = |x| {
+    let cb: cache::Callback = Box::new(|x| {
         let string = format!("{x} just went out cache!");
         let mut file = File::create("/tmp/testing_cache_thingy2").unwrap();
         file.write_all(string.as_bytes()).unwrap();
-    };
+    });
 
     let mut c = Cache::new(Duration::new(5, 0), Some(cb)).await;
     c.insert("root".to_string(), PathBuf::from("/"));

@@ -6,7 +6,7 @@ use axum::{
 };
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, fs::{OpenOptions, self}, time::Duration};
+use std::{sync::Arc, fs::{OpenOptions, self}, time::Duration, path::PathBuf};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex, time::sleep};
 use tracing::{error, info, debug};
 
@@ -15,7 +15,6 @@ use crate::util;
 use crate::TargetsCompiling;
 
 #[derive(Debug, Deserialize, Serialize)]
-#[allow(dead_code)]
 pub struct PostData {
     os: String,
     os_version: String,
@@ -23,7 +22,6 @@ pub struct PostData {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[allow(dead_code)]
 pub struct ResponseData {
     target_triple: String
 }
@@ -119,7 +117,9 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
 pub async fn send_binary(
     Extension(repo_name): Extension<String>,
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
+    Extension(repo_location): Extension<PathBuf>,
     Extension(targets_compiling): Extension<TargetsCompiling>,
+    Extension(debug): Extension<bool>,
     Path(target_triple): Path<String>,
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
@@ -153,7 +153,7 @@ pub async fn send_binary(
             .unwrap()
             .to_string();
         info!("Returning file.");
-        return util::return_file(&target_triple, &name).await;
+        return util::return_file(&target_triple, &name, &repo_location).await;
     }
     drop(cache_guard);
 
@@ -194,14 +194,14 @@ pub async fn send_binary(
 
         // Clone the repo 
         info!("Cloning repo to: \"{repo_name}/{target_triple}\"");
-        if let Err(e) = util::clone_repo(&repo_name, &target_triple).await {
+        if let Err(e) = util::clone_repo(&repo_name, &target_triple, &repo_location).await {
             error!(e);
             return Err(e);
         }
 
         // Compile the target, return the entire path to the the executable
         info!("{target_triple} is not in cache, adding and compiling it now!");
-        let executable_path = util::compile(&target_triple).await?;
+        let executable_path = util::compile(&target_triple, &repo_location, debug).await?;
 
         info!("Compiled, now Inserting {target_triple} into cache");
         // NOTE: this might still be premature since we have not called
@@ -230,7 +230,7 @@ pub async fn send_binary(
         .to_string();
 
     info!("Returning file.");
-    util::return_file(&target_triple, &name).await
+    util::return_file(&target_triple, &name, &repo_location).await
 }
 
 pub async fn status(

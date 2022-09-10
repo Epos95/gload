@@ -6,7 +6,7 @@ use std::time::Duration;
 use std::time::Instant;
 
 /// The callback to run when a item goes out of the cache.
-type Callback = fn(String);
+pub type Callback = Box<dyn Fn(String) + Send + 'static>;
 
 /// A piece of data for usage in the [Cache](`Cache`).
 struct Data {
@@ -61,7 +61,7 @@ impl Cache {
 
                     // Remove all the now dead (timed out) pieces of data from the hashmap.
                     for key in &dead {
-                        if let Some(f) = callback {
+                        if let Some(ref f) = callback {
                             f(key.clone());
                         }
 
