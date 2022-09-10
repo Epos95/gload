@@ -9,7 +9,7 @@ use axum::{
 };
 use cache::Callback;
 use clap::{arg, command};
-use std::{fs::remove_dir_all, net::SocketAddr, sync::Arc, time::Duration, path::PathBuf};
+use std::{fs::remove_dir_all, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{error, info, metadata::LevelFilter};
 
@@ -52,9 +52,11 @@ async fn main() {
     }
 
     let mut repo_location: PathBuf = PathBuf::from(
-        matches.get_one::<String>("path")
-        .unwrap_or(&"./".to_string())
-        .clone());
+        matches
+            .get_one::<String>("path")
+            .unwrap_or(&"./".to_string())
+            .clone(),
+    );
     if !repo_location.exists() {
         error!("The location: {repo_location:?} does not exist!");
         std::process::exit(0);
@@ -63,11 +65,7 @@ async fn main() {
     }
     repo_location.push("repo_to_compile");
 
-
-    let repo_name = matches
-        .get_one::<String>("repo")
-        .unwrap()
-        .clone();
+    let repo_name = matches.get_one::<String>("repo").unwrap().clone();
     info!("Pointing at repo: {repo_name}");
 
     // Ensure that REPO_LOCATION exists and is empty.
@@ -130,7 +128,6 @@ async fn main() {
         .route("/get_target", post(routes::get_target))
         // Returns the actual compiled file
         .route("/get_binary/:path", get(routes::send_binary))
-
         //.route("/push", post(routes::recv).get(routes::get_target))
         .route("/status", get(routes::status))
         .layer(Extension(cache))

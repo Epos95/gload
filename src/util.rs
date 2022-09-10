@@ -1,11 +1,11 @@
-use std::{path::PathBuf, process::Stdio, fs, io::ErrorKind};
+use std::{fs, io::ErrorKind, path::PathBuf, process::Stdio};
 use tokio::io::AsyncReadExt;
 
 use axum::body::StreamBody;
 use http::{header, HeaderMap, HeaderValue};
 use tokio::{fs::File, process::Command};
 use tokio_util::io::ReaderStream;
-use tracing::{error, debug};
+use tracing::{debug, error};
 
 pub async fn is_valid_target(target_triple: &String) -> Option<String> {
     debug!("Trying to validate target: {target_triple}");
@@ -65,7 +65,6 @@ pub async fn return_file(
         .join(target_triple)
         .join("release")
         .join(executable_name);
-    
 
     debug!("Returning filename: {fname:?}");
     let file = match File::open(&fname).await {
@@ -102,8 +101,10 @@ pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
         // discreetly, otherwise panic. This is because NotFound
         // really doesnt matter to us at this point
         match kind {
-            ErrorKind::NotFound => {},
-            _ => {return Err(e.to_string());}
+            ErrorKind::NotFound => {}
+            _ => {
+                return Err(e.to_string());
+            }
         }
     }
 
@@ -117,7 +118,11 @@ pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
 }
 
 /// Should clone the `repo_name` into `repo_location/target_name`.
-pub async fn clone_repo(repo_name: &String, target_name: &String, repo_location: &PathBuf) -> Result<(), String> {
+pub async fn clone_repo(
+    repo_name: &String,
+    target_name: &String,
+    repo_location: &PathBuf,
+) -> Result<(), String> {
     let git_output = Command::new("git")
         .arg("clone")
         .arg(repo_name)
@@ -156,7 +161,6 @@ pub async fn compile(
     repo_location: &PathBuf,
     debug: bool,
 ) -> Result<PathBuf, String> {
-
     let (stdout, stderr) = if debug {
         (Stdio::inherit(), Stdio::inherit())
     } else {
