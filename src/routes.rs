@@ -89,7 +89,6 @@ pub async fn get_target(Json(json): Json<PostData>) -> Result<impl IntoResponse,
     info!("Guessed target_triple: {target_triple}");
 
     Ok(Json(ResponseData { target_triple }))
-    // Return a ResponseData
 }
 
 // From the data sent here the server should respond with a token for which specific file to download
@@ -111,11 +110,6 @@ pub async fn recv(Json(json): Json<PostData>) -> impl IntoResponse {
         .open("data.json")
         .unwrap();
     serde_json::to_writer_pretty(fd, &vector).unwrap();
-
-    // so basically convert the thing to a target_triple
-    // here and return it as a response.
-    // need more data to know which target triple maps
-    // to which architectures first.
 
     "wow"
 }
