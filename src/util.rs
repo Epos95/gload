@@ -164,7 +164,6 @@ pub async fn compile(
     };
 
     // need some way to get the "building" part of cargo output
-    // TODO: A way to print the stdout/stderr of cross for debug would be nice
     let s = Command::new("cross")
         .arg("b")
         .arg("--release")
