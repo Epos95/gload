@@ -1,77 +1,35 @@
+# Gload
+A "better" download button for your Github repository.
 
-# gLoad
+## A new download button
+This project is a "attempt" to make downloading from Github repositories (specifically those hosting Rust projects as of right now). After reading about some none technical peoples opinions about downloading software from Github I realized how much us more tecnical people take for granted in terms of building from source (but also how much more simple it is than downloading binaries).
+This led me to lazily start work on Gload, a way to build the project from source and then send the executable straight to the user, without them having to touch a version number or build tool.
 
-## Why do all this
-So after realising all of the techincal limitations of cross compilation and stuff its bstter to just use this as a remote compiler / hoster for rust projects.
+## Usage
+```
+gload 0.1.0
 
-## issues
-  * cross can not be run concurrently... (fix this by also having a muuuuch longer cache TTL)
+USAGE:
+    gload.exe [OPTIONS] <repo>
 
-## TODO before releasing:
-  * DONE: Write a clear project definition in README 
-  * DONE: Split up `send_binary` into multiple functions...
-  * DONE: maybe move the routes into a `routes.rs` file
-  * DONE: rewrite the `CurrentlyCompiling` mutex to reflect the fact that two cross compilations cannot run at the same time 
-  * DONE: Fix cloning each time.
-  * DONE: Need to actually use the cached path for something...
-  * DONE: make it actually detect which repo is downloaded in repo_to_compile
-  * DONE: A arg option for "development" where gload always pulls the repo
-  * DONE: actually grab the target-triple from the target 
-  * make docker work
-  * A more reponsive download page (shows compilation progress etc)
-  * Cleanup code
-  * rewrite README
+ARGS:
+    <repo>    The repo to compile and distribute
 
-## Implementing the reponsive download page
-    so to have a responsive download page we want everyone (the people waiting in line for compilation INCLUDING the person who started the compilation) to see the progress of the current compilation.
+OPTIONS:
+    -d, --debug               Toggled debug output
+    -h, --help                Print help information
+    -p, --path [<path>...]    The path to place "repo_to_compile" in. (defauls to "./"
+    -t [<timeout>...]         How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)
+    -V, --version             Print version information
+```
 
-### The frontends perspective:
-the front end should set get requests to a route for checking the current compilations progress, this can be part of the `CompilationProgress` which is just a struct containing:
-* What stage of compilation (e.g building or compiling etc)
-* how far along (in percent or something)
-* What target is getting compiled
+## How it works
+Gload is implemented as a simple webserver which simply reads information from the connecting users machine to reliably compile for their computer architecture.
+After this Gload compiles the project for that specific architecture and stores it in a cache for easy access for subsequent users and returns the executable file to the client.
+For hosting on lowend machines, its possible to change the lifetime of the data in the cache to offset CPU cycles (through compilation) against storage space (the compiled binaries stored on disk and in cache).
 
-knowing the current `CompilationProgress` should let all frontends waiting show the current state.
-
-## The backends perspective:
-The current compilation state can be kept in a `Extension<Arc<Mutex<T>>>`, this will let the current compiling route update the state and the status route get the progress whenever.
-    
-    
-
-
-## Github downloading for dummies! (githubs download button)
-
-### General description:
-so normies often have problems with downloading software from github (more specifically with getting a executable), so what happens if you want to distribute code to a largely non-technical demographic?
-Probably catastrophe as YOU want to host your code on github for VCS etc but the user wants a simple download button.
-This COULD be fixed by hosting binaries on sourceforge for example but this has two issues in my eyes:
- 1. Its kinda sus downloading a exe from most websites.
-    Exes hosted on websites could be intercepted or modified (by the 3rd party host) also: downloading random exes from randomish websites is something that should be destroyed as its a great vector for malware.
- 2. How does the user know *what* version they should download?
-    This is a issue with the more homegrown solutions which gets solved by bigger file hosters.
-
-This solution could let a programmer host a simple program for a non-techincal demographic easily without worrying about file hosting or other things!
-
-### Implementation
-So this should probably run in some sort of cloud or container to allow for upscaling if downloads surges.
-
-We could implement a rust webserver thing which redirects user to newly spun up docker instances which then compile the binary according to the system specifications and sends the compiled binary to the user and then shuts down.
-
-heroku dyno looks great for hosting
-
-### In depth design
-    The main thing runs as a webserver and for each request it *somehow* compiles the pointed to code base for that specific cpu architecture.
-    This can all be made better by the fact that we can "cache" the compiled binaries and then delete them after a while depending on how many downloads they get versus how much space they take up.
-
- * The program basically runs a webserver pointing to a github repository
- * The server itself might run in a docker container or something
- * When the server recieves a request it checks the users archtecture and generates a target triple thing
- * the server then checks if it has any binaries matching that target triple in cache
- * if not, check if the repo is cached, else git clone the repo
- * compile the repo for the specified target triple
- * return the generated (or existing) binary
-
- * How do we stop users from taking a TON of memory?
+## Disclaimer
+This is by no means meant to *actually* be a better download button, obviously it has all kinds of issues such as trust and speed (and most likely security). This was just a fun project to do to learn more about `Axum` and async Rust. If you think it looks cool and your users wont get spooked by getting sent to a shady white page, then by all means use it. Otherwise just compile the executables inside your CI pipeline and link to the executable from your README.
 
 ## Bugs and issues:
 * If there are dependencies needed to compile the project these need to be installed before running `Gload` or if running through docker these need to be handled in other ways.

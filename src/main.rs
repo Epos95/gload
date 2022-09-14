@@ -27,7 +27,7 @@ async fn main() {
         .arg(arg!(             <repo>    "The repo to compile and distribute"))
         .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)"))
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
-        .arg(arg!(-p --path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./repo_to_compile\""))
+        .arg(arg!(-p --path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./\""))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
