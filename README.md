@@ -18,7 +18,8 @@ ARGS:
 OPTIONS:
     -d, --debug               Toggled debug output
     -h, --help                Print help information
-    -p, --path [<path>...]    The path to place "repo_to_compile" in. (defauls to "./"
+    -p, --port [<port>...]    The port number to host the server on (defaults to 3000
+        --path [<path>...]    The path to place "repo_to_compile" in. (defauls to "./"
     -t [<timeout>...]         How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)
     -V, --version             Print version information
 ```
