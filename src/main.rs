@@ -27,7 +27,8 @@ async fn main() {
         .arg(arg!(             <repo>    "The repo to compile and distribute"))
         .arg(arg!(-t           [timeout] "How long values should live (in seconds) in the cache! Set to 0 for no cache timeout. (defaults to 1024 seconds)"))
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
-        .arg(arg!(-p --path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./repo_to_compile\""))
+        .arg(arg!(--path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./\""))
+        .arg(arg!(-p --port    [port]    "The port number to host the server on (defaults to 3000"))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -43,6 +44,11 @@ async fn main() {
         .finish();
 
     tracing::subscriber::set_global_default(sub).unwrap();
+
+    let port = matches.get_one::<String>("port")
+        .unwrap_or(&3000.to_string())
+        .parse::<u16>()
+        .expect("Invalid argument!");
 
     if util::cross_not_found() {
         error!("the \"cross\" executable could not be found, is it installed and in path?");
@@ -124,7 +130,7 @@ async fn main() {
         .layer(Extension(targets_compiling));
 
     // run it
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("Listening on ip: {addr}");
     axum::Server::bind(&addr)
         .serve(app.into_make_service())

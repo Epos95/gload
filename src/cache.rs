@@ -42,6 +42,8 @@ impl Cache {
                 // Vec for storing the dead (timed out) keys from the hashmap.
                 // This looks really weird since we allocate the vec at new-time
                 // when the hashmap does not have any elements in it...?
+                // We do need a auxillary data structure though since we cant remove 
+                // things from the map while iterating over the it.
                 let mut dead: Vec<String> = Vec::with_capacity(h.lock().unwrap().len());
 
                 loop {
