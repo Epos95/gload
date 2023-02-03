@@ -7,13 +7,13 @@ This led me to lazily start work on Gload, a way to build the project from sourc
 
 ## Usage
 ```
-gload 0.1.0
+gload 0.1.1
 
 USAGE:
     gload.exe [OPTIONS] <repo>
 
 ARGS:
-    <repo>    The repo to compile and distribute
+    <repo>    The repo to compile and distribute. This repo can be a https or ssh link to a github repository to serve or it can be a filepath to a local rust repository to serve.
 
 OPTIONS:
     -d, --debug               Toggled debug output
