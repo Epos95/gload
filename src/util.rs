@@ -55,11 +55,11 @@ pub async fn is_valid_target(target_triple: &String) -> Option<String> {
 pub async fn return_file(
     target_triple: &String,
     executable_name: &String,
-    repo_location: &PathBuf,
+    compilation_directory: &PathBuf,
 ) -> Result<(HeaderMap, StreamBody<ReaderStream<File>>), String> {
     // At this point we can be sure that the file exists
     // and that we can grab it safely (hopefully)!
-    let fname = repo_location
+    let fname = compilation_directory
         .join(target_triple)
         .join("target")
         .join(target_triple)
@@ -90,11 +90,11 @@ pub async fn return_file(
     Ok((headers, body))
 }
 
-/// Destroys and restores the repo_location folder so that it can be used again.
-pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
+/// Destroys and restores the compilation_directory folder so that it can be used again.
+pub fn restore_compilation_directory(compilation_directory: &PathBuf) -> Result<(), String> {
     debug!("Checking repo availiability...");
 
-    if let Err(e) = fs::remove_dir_all(repo_location) {
+    if let Err(e) = fs::remove_dir_all(compilation_directory) {
         let kind = e.kind();
 
         // Handle errors which are recoverable (such as NotFound)
@@ -108,7 +108,7 @@ pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
         }
     }
 
-    if let Err(e) = fs::create_dir(repo_location) {
+    if let Err(e) = fs::create_dir(compilation_directory) {
         return Err(e.to_string());
     }
 
@@ -117,16 +117,16 @@ pub fn restore_repo_location(repo_location: &PathBuf) -> Result<(), String> {
     Ok(())
 }
 
-/// Should clone the `repo_name` into `repo_location/target_name`.
+/// Should clone the `origin_url` into `compilation_directory/target_name`.
 pub async fn clone_repo(
-    repo_name: &String,
+    origin_url: &String,
     target_name: &String,
-    repo_location: &PathBuf,
+    compilation_directory: &PathBuf,
 ) -> Result<(), String> {
     let git_output = Command::new("git")
         .arg("clone")
-        .arg(repo_name)
-        .arg(repo_location.join(target_name))
+        .arg(origin_url)
+        .arg(compilation_directory.join(target_name))
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn();
@@ -138,7 +138,7 @@ pub async fn clone_repo(
         Ok(mut o) => {
             // Check the git output
             if o.wait().await.unwrap().code().unwrap() != 0 {
-                error!("Error when trying to clone git repository \"{repo_name}\"");
+                error!("Error when trying to clone git repository \"{origin_url}\"");
                 return Err(
                     "Error when trying to clone git repository, please try again later!"
                         .to_string(),
@@ -158,7 +158,7 @@ pub async fn clone_repo(
 /// Returns the path to the compiled executable file.
 pub async fn compile(
     target_triple: &String,
-    repo_location: &PathBuf,
+    compilation_directory: &PathBuf,
     debug: bool,
 ) -> Result<PathBuf, String> {
     let (stdout, stderr) = if debug {
@@ -172,7 +172,7 @@ pub async fn compile(
         .arg("b")
         .arg("--release")
         .arg("--manifest-path")
-        .arg(repo_location.join(target_triple).join("Cargo.toml"))
+        .arg(compilation_directory.join(target_triple).join("Cargo.toml"))
         .arg(format!("--target={target_triple}"))
         .stdout(stdout)
         .stderr(stderr)
@@ -189,8 +189,8 @@ pub async fn compile(
         }
     }
 
-    let executable_name = get_executable_name(target_triple, repo_location).await;
-    let executable_path = repo_location
+    let executable_name = get_executable_name(target_triple, compilation_directory).await;
+    let executable_path = compilation_directory
         .join("target")
         .join(target_triple)
         .join("release")
@@ -200,8 +200,8 @@ pub async fn compile(
 }
 
 /// Get a executables name via Cargo.toml to be /absolutely/ sure its the corrent name.
-pub async fn get_executable_name(target_triple: &String, repo_location: &PathBuf) -> String {
-    let mut file_descriptor = File::open(repo_location.join(target_triple).join("Cargo.toml"))
+pub async fn get_executable_name(target_triple: &String, compilation_directory: &PathBuf) -> String {
+    let mut file_descriptor = File::open(compilation_directory.join(target_triple).join("Cargo.toml"))
         .await
         .unwrap();
     let mut string = String::new();

@@ -1,6 +1,6 @@
 [package]
 name = "gload"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,6 +9,7 @@ edition = "2021"
 axum = "0.5.9"
 clap = { version = "3.2.6", features = ["cargo"] }
 crossbeam = "0.8.1"
+fs_extra = "1.2.0"
 hashbrown = "0.12.1"
 http = "0.2.8"
 serde = { version = "1.0.138", features = ["derive", "std"] }

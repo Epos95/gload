@@ -57,25 +57,25 @@ async fn main() {
         info!("Cross found!");
     }
 
-    let mut repo_location: PathBuf = PathBuf::from(
+    let mut compilation_directory: PathBuf = PathBuf::from(
         matches
             .get_one::<String>("path")
             .unwrap_or(&"./".to_string())
             .clone(),
     );
-    if !repo_location.exists() {
-        error!("The location: {repo_location:?} does not exist!");
+    if !compilation_directory.exists() {
+        error!("The location: {compilation_directory:?} does not exist!");
         std::process::exit(0);
     } else {
-        info!("Found location {repo_location:?}");
+        info!("Found location {compilation_directory:?}");
     }
-    repo_location.push("repo_to_compile");
+    compilation_directory.push("repo_to_compile");
 
-    let repo_name = matches.get_one::<String>("repo").unwrap().clone();
-    info!("Pointing at repo: {repo_name}");
+    let origin_url = matches.get_one::<String>("repo").unwrap().clone();
+    info!("Pointing at repo: {origin_url}");
 
-    // Ensure that REPO_LOCATION exists and is empty.
-    if let Err(e) = util::restore_repo_location(&repo_location) {
+    // Ensure that compilation_directory exists and is empty.
+    if let Err(e) = util::restore_compilation_directory(&compilation_directory) {
         error!(e);
         return;
     }
@@ -95,7 +95,7 @@ async fn main() {
     info!("Log level set to: {log_level}");
 
     // GODAHMN this is hacky
-    let thing = Box::new(repo_location.clone());
+    let thing = Box::new(compilation_directory.clone());
     let dummy = Box::leak(thing.clone());
     let callback: Option<Callback> = Some(Box::new(|x| {
         let fname = dummy.join(x).into_os_string().into_string().unwrap();
@@ -124,8 +124,8 @@ async fn main() {
         // Returns the actual compiled file
         .route("/get_binary/:path", get(routes::send_binary))
         .layer(Extension(cache))
-        .layer(Extension(repo_name))
-        .layer(Extension(repo_location))
+        .layer(Extension(origin_url))
+        .layer(Extension(compilation_directory))
         .layer(Extension(matches.contains_id("debug")))
         .layer(Extension(targets_compiling));
 
