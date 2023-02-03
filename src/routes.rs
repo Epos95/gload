@@ -157,27 +157,28 @@ pub async fn send_binary(
         // Drop the mutex to allow others trying to compile the same target access.
         drop(being_compiled);
 
-        if !origin_url.contains("https://") || !origin_url.contains("git@") {
-            let local_repo = PathBuf::from(origin_url);
-            let destination = compilation_directory.join(&target_triple);
-            //std::fs::create_dir(&destination).unwrap();
-
-            info!("Using a local repo ({local_repo:?})!");
-            info!("Copying {local_repo:?} to {destination:?}");
-
-            // Copy local_repo to `destination`
-            let mut opts = fs_extra::dir::CopyOptions::new();
-            opts.overwrite = true;
-            opts.copy_inside = true;
-
-            fs_extra::dir::copy(local_repo, destination, &opts).unwrap();
-        } else {
+        if origin_url.contains("https://") || origin_url.contains("git@") {
             // Clone the repo
             info!("Cloning repo to: \"{origin_url}/{target_triple}\"");
             if let Err(e) = util::clone_repo(&origin_url, &target_triple, &compilation_directory).await {
                 error!(e);
                 return Err(e);
             }
+
+        } else {
+
+            let local_repo = PathBuf::from(origin_url);
+            let destination = compilation_directory.join(&target_triple);
+
+            info!("Copying {local_repo:?} to {destination:?}");
+
+            // Overwrite and copy contents
+            let mut opts = fs_extra::dir::CopyOptions::new();
+            opts.overwrite = true;
+            opts.copy_inside = true;
+
+            // Copy local_repo to `destination`
+            fs_extra::dir::copy(local_repo, destination, &opts).unwrap();
         }
 
 
