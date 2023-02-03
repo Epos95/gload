@@ -86,9 +86,9 @@ pub async fn get_target(Json(json): Json<PostData>) -> Result<impl IntoResponse,
 }
 
 pub async fn send_binary(
-    Extension(repo_name): Extension<String>,
+    Extension(origin_url): Extension<String>,
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
-    Extension(repo_location): Extension<PathBuf>,
+    Extension(compilation_directory): Extension<PathBuf>,
     Extension(targets_compiling): Extension<TargetsCompiling>,
     Extension(debug): Extension<bool>,
     Path(target_triple): Path<String>,
@@ -118,7 +118,7 @@ pub async fn send_binary(
         debug!("Found path: {path_but_string} in cache");
         let name = path_but_string.split('/').last().unwrap().to_string();
         info!("Returning file.");
-        return util::return_file(&target_triple, &name, &repo_location).await;
+        return util::return_file(&target_triple, &name, &compilation_directory).await;
     }
     drop(cache_guard);
 
@@ -158,15 +158,15 @@ pub async fn send_binary(
         drop(being_compiled);
 
         // Clone the repo
-        info!("Cloning repo to: \"{repo_name}/{target_triple}\"");
-        if let Err(e) = util::clone_repo(&repo_name, &target_triple, &repo_location).await {
+        info!("Cloning repo to: \"{origin_url}/{target_triple}\"");
+        if let Err(e) = util::clone_repo(&origin_url, &target_triple, &compilation_directory).await {
             error!(e);
             return Err(e);
         }
 
         // Compile the target, return the entire path to the the executable
         info!("{target_triple} is not in cache, adding and compiling it now!");
-        let executable_path = util::compile(&target_triple, &repo_location, debug).await?;
+        let executable_path = util::compile(&target_triple, &compilation_directory, debug).await?;
 
         info!("Compiled, now Inserting {target_triple} into cache");
         // NOTE: this might still be premature since we have not called
@@ -195,5 +195,5 @@ pub async fn send_binary(
         .to_string();
 
     info!("Returning file.");
-    util::return_file(&target_triple, &name, &repo_location).await
+    util::return_file(&target_triple, &name, &compilation_directory).await
 }
