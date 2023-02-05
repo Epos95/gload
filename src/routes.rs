@@ -14,7 +14,7 @@ use std::{
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex, time::sleep};
 use tracing::{debug, error, info};
 
-use crate::cache::Cache;
+use crate::{cache::Cache, util::Config};
 use crate::util;
 use crate::TargetsCompiling;
 
@@ -90,7 +90,7 @@ pub async fn send_binary(
     Extension(cache): Extension<Arc<Mutex<Cache>>>,
     Extension(compilation_directory): Extension<PathBuf>,
     Extension(targets_compiling): Extension<TargetsCompiling>,
-    Extension(debug): Extension<bool>,
+    Extension(config): Extension<Config>,
     Path(target_triple): Path<String>,
 ) -> Result<impl IntoResponse, String> {
     info!("Recieved a request to get target triple \"{target_triple}\"");
@@ -184,7 +184,7 @@ pub async fn send_binary(
 
         // Compile the target, return the entire path to the the executable
         info!("{target_triple} is not in cache, adding and compiling it now!");
-        let executable_path = util::compile(&target_triple, &compilation_directory, debug).await?;
+        let executable_path = util::compile(&target_triple, &compilation_directory, &config).await?;
 
         info!("Compiled, now Inserting {target_triple} into cache");
         // NOTE: this might still be premature since we have not called

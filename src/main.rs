@@ -17,7 +17,7 @@ pub mod cache;
 pub mod routes;
 pub mod util;
 
-use crate::cache::Cache;
+use crate::{cache::Cache, util::Config};
 
 type TargetsCompiling = Arc<Mutex<Vec<String>>>;
 
@@ -29,6 +29,7 @@ async fn main() {
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
         .arg(arg!(--path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./\""))
         .arg(arg!(-p --port    [port]    "The port number to host the server on (defaults to 3000"))
+        .arg(arg!(-n --name    [name]    "The name of the binary to return. Useful for when serving a repo which compiles multiple binaries."))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -115,6 +116,13 @@ async fn main() {
     // with capacity since we will NEVER store more than 99 targets at the same time.
     let targets_compiling = Arc::new(Mutex::new(Vec::<String>::with_capacity(99)));
 
+    let config = Config::new(
+        matches.contains_id("debug"),
+        matches.get_one::<String>("name").cloned()
+    );
+
+    println!("{config:?}");
+
     // build our application with some routes
     let app = Router::new()
         // Entry point for the application
@@ -126,7 +134,7 @@ async fn main() {
         .layer(Extension(cache))
         .layer(Extension(origin_url))
         .layer(Extension(compilation_directory))
-        .layer(Extension(matches.contains_id("debug")))
+        .layer(Extension(config))
         .layer(Extension(targets_compiling));
 
     // run it
