@@ -159,9 +159,9 @@ pub async fn clone_repo(
 pub async fn compile(
     target_triple: &String,
     compilation_directory: &PathBuf,
-    debug: bool,
+    config: &Config
 ) -> Result<PathBuf, String> {
-    let (stdout, stderr) = if debug {
+    let (stdout, stderr) = if config.debug {
         (Stdio::inherit(), Stdio::inherit())
     } else {
         (Stdio::null(), Stdio::null())
@@ -189,7 +189,12 @@ pub async fn compile(
         }
     }
 
-    let executable_name = get_executable_name(target_triple, compilation_directory).await;
+    let executable_name = if let Some(e) = config.binary_name.clone() {
+        e.clone()
+    } else {
+        get_executable_name(target_triple, compilation_directory).await
+    };
+
     let executable_path = compilation_directory
         .join("target")
         .join(target_triple)
@@ -229,4 +234,25 @@ pub fn cross_not_found() -> bool {
         .stderr(Stdio::null())
         .spawn()
         .is_err()
+}
+
+#[derive(Clone)]
+pub struct Config {
+    debug: bool,
+    binary_name: Option<String>,
+}
+
+impl Config {
+    pub fn new(debug: bool, binary_name: Option<String>) -> Self {
+        Config {
+            debug,
+            binary_name,
+        }
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self { debug: false, binary_name: None }
+    }
 }
