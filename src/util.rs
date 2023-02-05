@@ -236,7 +236,7 @@ pub fn cross_not_found() -> bool {
         .is_err()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     debug: bool,
     binary_name: Option<String>,

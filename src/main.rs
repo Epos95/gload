@@ -29,7 +29,7 @@ async fn main() {
         .arg(arg!(debug: -d --debug      "Toggled debug output"))
         .arg(arg!(--path    [path]    "The path to place \"repo_to_compile\" in. (defauls to \"./\""))
         .arg(arg!(-p --port    [port]    "The port number to host the server on (defaults to 3000"))
-        .arg(arg!(-n --name    [binary_name]    "The name of the binary to return. Useful for when serving a repo which compiles multiple binaries."))
+        .arg(arg!(-n --name    [name]    "The name of the binary to return. Useful for when serving a repo which compiles multiple binaries."))
         .get_matches();
 
     let log_level = if matches.contains_id("debug") {
@@ -118,8 +118,10 @@ async fn main() {
 
     let config = Config::new(
         matches.contains_id("debug"),
-        matches.get_one::<String>("binary_name").cloned()
+        matches.get_one::<String>("name").cloned()
     );
+
+    println!("{config:?}");
 
     // build our application with some routes
     let app = Router::new()
